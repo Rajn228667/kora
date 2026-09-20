@@ -1,0 +1,88 @@
+# =============================================================================
+# KORA monorepo .gitignore
+# =============================================================================
+
+# --- Secrets / environment ---------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.p8
+*.keystore
+*.jks
+keys/
+secrets/
+**/google-services.json
+**/GoogleService-Info.plist
+**/service-account*.json
+
+# --- Node.js / backend -------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+build/
+*.tsbuildinfo
+coverage/
+.nyc_output/
+backend/prisma/migrations/dev.db*
+backend/generated/
+
+# --- Flutter / Dart ----------------------------------------------------------
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+app/build/
+app/.dart_tool/
+flutter_*.png
+*.iml
+.idea/
+app/android/.gradle/
+app/android/local.properties
+app/android/app/debug
+app/android/app/profile
+app/android/app/release
+app/android/key.properties
+app/ios/.generated/
+app/ios/Flutter/.last_build_id
+app/ios/Flutter/App.framework
+app/ios/Flutter/Flutter.framework
+app/ios/Flutter/Flutter.podspec
+app/ios/Flutter/ephemeral/
+app/ios/Flutter/flutter_export_environment.sh
+app/ios/Pods/
+app/ios/.symlinks/
+app/ios/Podfile.lock
+app/ios/Runner.xcworkspace/
+app/ios/build/
+app/macos/Flutter/ephemeral/
+app/windows/flutter/ephemeral/
+app/linux/flutter/ephemeral/
+symbols/
+*.aab
+*.apk
+*.ipa
+*.dSYM.zip
+*.dSYM/
+
+# --- Infra / local data ------------------------------------------------------
+infra/data/
+*.sql.gz
+*.dump
+*.backup
+
+# --- OS / editor -------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+.vscode/
+*.log

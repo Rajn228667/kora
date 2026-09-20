@@ -1,0 +1,161 @@
+name: Release
+
+# Manual release pipeline. Build artifacts, then tag.
+# Store submission itself is manual/phased — see docs/STORE_RELEASE.md.
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: "versionName / marketing version (e.g. 1.2.0)"
+        required: true
+      version_code:
+        description: "versionCode / build number (integer, must increase)"
+        required: true
+      environment:
+        description: "Target environment"
+        type: choice
+        options: [staging, production]
+        default: staging
+      create_tag:
+        description: "Create git tag v<version_name>"
+        type: boolean
+        default: true
+
+env:
+  API_URL_PROD: https://api.kora.kz
+  WS_URL_PROD: wss://api.kora.kz
+  API_URL_STAGING: https://api.staging.kora.kz
+  WS_URL_STAGING: wss://api.staging.kora.kz
+
+jobs:
+  android:
+    name: android (AAB + APK)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Select env endpoints
+        id: envsel
+        run: |
+          if [ "${{ inputs.environment }}" = "production" ]; then
+            echo "API_URL=$API_URL_PROD" >> "$GITHUB_OUTPUT"
+            echo "WS_URL=$WS_URL_PROD" >> "$GITHUB_OUTPUT"
+          else
+            echo "API_URL=$API_URL_STAGING" >> "$GITHUB_OUTPUT"
+            echo "WS_URL=$WS_URL_STAGING" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Pub get
+        working-directory: app
+        run: flutter pub get
+
+      # --- Signing -------------------------------------------------------------
+      # Requires CI secrets (base64-encoded keystore + key.properties fields):
+      #   ANDROID_KEYSTORE_BASE64, ANDROID_KEY_PASSWORD,
+      #   ANDROID_KEY_ALIAS, ANDROID_STORE_PASSWORD
+      # Uncomment when secrets are configured.
+      # - name: Decode keystore
+      #   run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > app/android/kora-release.keystore
+      # - name: Write key.properties
+      #   run: |
+      #     cat > app/android/key.properties <<EOF
+      #     storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
+      #     keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+      #     keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+      #     storeFile=kora-release.keystore
+      #     EOF
+      # --------------------------------------------------------------------------
+
+      - name: Build AAB (release)
+        working-directory: app
+        run: |
+          flutter build appbundle --release \
+            --build-name="${{ inputs.version_name }}" \
+            --build-number="${{ inputs.version_code }}" \
+            --dart-define API_URL=${{ steps.envsel.outputs.API_URL }} \
+            --dart-define WS_URL=${{ steps.envsel.outputs.WS_URL }} \
+            --dart-define APP_ENV=${{ inputs.environment }}
+      - name: Build APK (release)
+        working-directory: app
+        run: |
+          flutter build apk --release \
+            --build-name="${{ inputs.version_name }}" \
+            --build-number="${{ inputs.version_code }}" \
+            --dart-define API_URL=${{ steps.envsel.outputs.API_URL }} \
+            --dart-define WS_URL=${{ steps.envsel.outputs.WS_URL }} \
+            --dart-define APP_ENV=${{ inputs.environment }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ inputs.environment }}-${{ inputs.version_name }}
+          path: |
+            app/build/app/outputs/bundle/release/*.aab
+            app/build/app/outputs/flutter-apk/*-release.apk
+          retention-days: 30
+
+  # ============================================================================
+  # iOS — requires macOS runner + Apple signing secrets. Placeholder:
+  # uncomment and configure when Distribution cert / provisioning profile /
+  # App Store Connect API key are available as secrets:
+  #   IOS_CERT_BASE64, IOS_CERT_PASSWORD, IOS_PROVISION_PROFILE_BASE64,
+  #   APPSTORE_CONNECT_KEY_ID, APPSTORE_CONNECT_ISSUER_ID, APPSTORE_CONNECT_KEY
+  # ============================================================================
+  ios:
+    name: ios (IPA)
+    runs-on: macos-latest
+    if: ${{ inputs.environment == 'production' }} # staging iOS via TestFlight manual build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Pub get
+        working-directory: app
+        run: flutter pub get
+
+      # --- Signing -------------------------------------------------------------
+      # - name: Import distribution certificate + provisioning profile
+      #   run: |
+      #     echo "${{ secrets.IOS_CERT_BASE64 }}" | base64 -d > dist.p12
+      #     # security import / fastlane match …
+      # --------------------------------------------------------------------------
+
+      - name: Build iOS (unsigned — compile check)
+        working-directory: app
+        run: |
+          flutter build ios --release --no-codesign \
+            --build-name="${{ inputs.version_name }}" \
+            --build-number="${{ inputs.version_code }}" \
+            --dart-define API_URL=${{ env.API_URL_PROD }} \
+            --dart-define WS_URL=${{ env.WS_URL_PROD }} \
+            --dart-define APP_ENV=production
+      # Signed IPA + upload — uncomment after signing secrets are configured:
+      # - name: Build signed IPA
+      #   working-directory: app
+      #   run: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+      # - uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ios-production-${{ inputs.version_name }}
+      #     path: app/build/ios/ipa/*.ipa
+
+  tag:
+    name: tag release
+    needs: [android]
+    if: ${{ inputs.create_tag }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ inputs.version_name }}" -m "KORA v${{ inputs.version_name }} (${{ inputs.environment }})"
+          git push origin "v${{ inputs.version_name }}"

@@ -1,0 +1,90 @@
+# =============================================================================
+# KORA — local development infrastructure
+# Postgres 16 + Redis 7 + MinIO (S3) + one-shot bucket bootstrap.
+#
+#   docker compose -f infra/docker-compose.yml up -d
+#   docker compose -f infra/docker-compose.yml down -v   # wipe data
+#
+# Dev profile only. Do NOT reuse these credentials outside localhost.
+# =============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kora-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kora
+      POSTGRES_PASSWORD: kora
+      POSTGRES_DB: kora
+    ports:
+      - "5432:5432"
+    volumes:
+      - kora-pgdata:/var/lib/postgresql/data
+      # Extensions bootstrap (pg_trgm, unaccent, pgcrypto) — runs only on
+      # first init of an empty data volume.
+      - ./db/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kora -d kora"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    container_name: kora-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - kora-redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 3s
+
+  minio:
+    image: minio/minio:latest
+    container_name: kora-minio
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: kora
+      MINIO_ROOT_PASSWORD: koraminio
+    ports:
+      - "9000:9000"   # S3 API   → S3_ENDPOINT=http://localhost:9000
+      - "9001:9001"   # console  → http://localhost:9001
+    volumes:
+      - kora-miniodata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "mc alias set local http://localhost:9000 kora koraminio >/dev/null 2>&1 && mc ready local"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+  # One-shot job: creates the dev bucket used by STORAGE_DRIVER=s3.
+  minio-init:
+    image: minio/mc:latest
+    container_name: kora-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mc alias set local http://minio:9000 kora koraminio;
+        mc mb --ignore-existing local/kora-media;
+        # Bucket stays private — app serves media via presigned URLs.
+        echo "minio-init: bucket 'kora-media' ready";
+    restart: "no"
+
+volumes:
+  kora-pgdata:
+  kora-redisdata:
+  kora-miniodata:
