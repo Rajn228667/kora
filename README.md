@@ -5,6 +5,14 @@ of a Flutter mobile app (customers, couriers, store managers) and a
 Node.js/TypeScript Fastify backend backed by PostgreSQL, Redis and
 S3-compatible object storage.
 
+## Live
+
+- **Web app:** https://kora-liard-six.vercel.app (Flutter web build, Vercel)
+- **Android APK / AAB:** https://github.com/Rajn228667/kora/releases/latest
+- **Database:** Supabase Postgres, project `egjswwveeezjavpegjaf`
+  (eu-central-1) — schema applied from `backend/prisma/migrations/0001_init`
+- **Source:** https://github.com/Rajn228667/kora
+
 - **Backend:** Node 24 · TypeScript · Fastify v5 · Prisma 6 · PostgreSQL 16 · Redis 7 · MinIO/S3
 - **App:** Flutter · Riverpod · go_router · dio
 - **Payments:** Kaspi merchant API (mock provider in development)
