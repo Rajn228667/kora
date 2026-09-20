@@ -23,6 +23,7 @@ abstract final class KoraColors {
 
   // Text & borders
   static const Color textPrimary = Color(0xFF18181B);
+  static const Color brandNavy = Color(0xFF26233B);
   static const Color textSecondary = Color(0xFF52525B);
   static const Color placeholder = Color(0xFFA1A1AA);
   static const Color disabled = Color(0xFFD4D4D8);

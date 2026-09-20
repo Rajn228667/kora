@@ -33,18 +33,22 @@ class WelcomeScreen extends StatelessWidget {
           child: Column(
             children: [
               const Spacer(),
-              Container(
+              Image.asset(
+                'assets/brand/kora_logo_k.png',
                 width: 140,
                 height: 140,
-                decoration: const BoxDecoration(
-                  gradient: KoraColors.primaryGradient,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(AppIcons.bike,
-                    size: 72, color: KoraColors.white,),
               ),
-              const SizedBox(height: AppSpacing.xxl),
-              Text('KORA', style: AppTypography.displayLarge),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                'KORA',
+                style: AppTypography.displayLarge.copyWith(
+                  color: KoraTheme.dark
+                      ? KoraColors.darkTextPrimary
+                      : KoraColors.brandNavy,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.5,
+                ),
+              ),
               const SizedBox(height: AppSpacing.sm),
               Text(
                 S.t('welcome.subtitle'),

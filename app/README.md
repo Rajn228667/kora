@@ -145,5 +145,5 @@ flutter test
 - [ ] `APP_MODE=api` + боевые `API_URL`/`WS_URL`
 - [ ] Убрать dev-подсказки (devOtp banner, dev phones) — `AppEnv.isDev`
 - [ ] `MAP_API_KEY` от 2GIS + `dgis_mobile_sdk`, Kaspi merchant
-- [ ] Иконка/splash из `assets/brand/kora_logo.png`
+- [x] Иконка/splash из `assets/brand/kora_logo.png` (v1.0.2: adaptive icon + native splash, iOS AppIcon/LaunchImage)
 - [ ] ProGuard/R8, signing (см. `../docs/STORE_RELEASE.md`)

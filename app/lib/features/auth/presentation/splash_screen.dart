@@ -103,9 +103,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                   child: Text(
                     'KORA',
                     style: AppTypography.displayLarge.copyWith(
-                      color: KoraColors.textPrimaryC,
+                      color: KoraTheme.dark
+                          ? KoraColors.darkTextPrimary
+                          : KoraColors.brandNavy,
                       fontWeight: FontWeight.w800,
-                      letterSpacing: -1,
+                      letterSpacing: 1.5,
                     ),
                   ),
                 ),
