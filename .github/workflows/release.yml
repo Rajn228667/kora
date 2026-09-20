@@ -135,6 +135,17 @@ jobs:
             --dart-define API_URL=${{ env.API_URL_PROD }} \
             --dart-define WS_URL=${{ env.WS_URL_PROD }} \
             --dart-define APP_ENV=production
+      - name: Package unsigned IPA (simulator/sideload QC)
+        working-directory: app
+        run: |
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -r kora-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-${{ inputs.environment }}-${{ inputs.version_name }}-unsigned
+          path: app/kora-unsigned.ipa
+          retention-days: 30
       # Signed IPA + upload — uncomment after signing secrets are configured:
       # - name: Build signed IPA
       #   working-directory: app
