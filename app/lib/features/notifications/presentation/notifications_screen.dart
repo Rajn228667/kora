@@ -232,7 +232,7 @@ class _NotifTile extends StatelessWidget {
                   Text(n.body, style: AppTypography.caption),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
-                    DateFormat('d MMM, HH:mm').format(n.at),
+                    DateFormat('d MMM, HH:mm', S.lang.name).format(n.at),
                     style: AppTypography.caption
                         .copyWith(color: KoraColors.placeholderC),
                   ),

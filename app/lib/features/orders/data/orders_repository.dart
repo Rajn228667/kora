@@ -139,3 +139,24 @@ final orderProvider = Provider.family<Order?, String>((ref, id) {
   if (list == null) return null;
   return list.where((o) => o.id == id).firstOrNull;
 });
+
+/// Order detail: live value from the orders list when present, else a
+/// direct fetch — deep links to orders outside the list (e.g. courier's
+/// active delivery) still resolve. Active orders also merge the latest
+/// courier position from /tracking.
+final orderDetailProvider =
+    FutureProvider.family<Order, String>((ref, id) async {
+  final inList = ref.watch(orderProvider(id));
+  if (inList != null) return inList;
+  var order = await ref.watch(ordersRepositoryProvider).order(id);
+  if (order.isActive) {
+    try {
+      final t = await ref.read(ordersRepositoryProvider).tracking(id);
+      order = order.copyWith(
+        courierLocation: t.courierLocation,
+        courierName: t.courierName,
+      );
+    } catch (_) {/* tracking is best-effort */}
+  }
+  return order;
+});

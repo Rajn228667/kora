@@ -358,6 +358,70 @@ void main() {
       expect(unblocked['blocked'], isFalse);
     });
 
+    test('bogo promo code gives every 3rd unit free', () async {
+      final api = await loggedIn();
+      await api.post('/admin/promo-codes', body: {
+        'code': 'BOGO',
+        'bogo': true,
+      },);
+      await api.post('/cart/items',
+          body: {'productId': 'p-samsa', 'qty': 3},);
+      final res = await api.post('/promo-codes/validate',
+          body: {'code': 'BOGO'},) as Map<String, dynamic>;
+      expect(res['valid'], isTrue);
+      expect((res['discountTiyn'] as num).toInt(), greaterThan(0));
+      // Applied at checkout too.
+      final checkout = await api.post('/checkout', body: {
+        'address': 'A',
+        'promoCode': 'BOGO',
+      },) as Map<String, dynamic>;
+      expect((checkout['order'] as Map)['discountTiyn'], greaterThan(0));
+    });
+
+    test('first-order promo rejected after a delivered order', () async {
+      final api = await loggedIn();
+      await api.post('/admin/promo-codes', body: {
+        'code': 'FIRST10',
+        'percent': 10,
+        'firstOrder': true,
+      },);
+      // Place + deliver an order via courier flow.
+      await api.post('/cart/items',
+          body: {'productId': 'p-samsa', 'qty': 1},);
+      final checkout = await api.post('/checkout',
+          body: {'address': 'A'},) as Map<String, dynamic>;
+      final oid = (checkout['order'] as Map)['id'] as String;
+      await api.post('/couriers/orders/$oid/status',
+          body: {'status': 'delivered'},);
+      await api.post('/cart/items',
+          body: {'productId': 'p-samsa', 'qty': 1},);
+      final res = await api.post('/promo-codes/validate',
+          body: {'code': 'FIRST10'},) as Map<String, dynamic>;
+      expect(res['valid'], isFalse);
+    });
+
+    test('wallet-paid order cancellation refunds the wallet', () async {
+      final api = await loggedIn();
+      final before = (await api.get('/users/me/wallet')
+          as Map<String, dynamic>)['balanceTiyn'] as int;
+      await api.post('/cart/items',
+          body: {'productId': 'p-samsa', 'qty': 1},);
+      final checkout = await api.post('/checkout', body: {
+        'address': 'A',
+        'paymentMethod': 'wallet',
+      },) as Map<String, dynamic>;
+      final oid = (checkout['order'] as Map)['id'] as String;
+      await api.post('/orders/$oid/cancel', body: const {});
+      final after = (await api.get('/users/me/wallet')
+          as Map<String, dynamic>)['balanceTiyn'] as int;
+      // Cashback stays, the spend is refunded.
+      expect(after, greaterThan(before - 1));
+      final txns = await api.get('/users/me/wallet/transactions')
+          as Map<String, dynamic>;
+      expect((txns['items'] as List).any(
+          (t) => (t as Map)['kind'] == 'refund',), isTrue,);
+    });
+
     test('courier assignment advances a real order', () async {
       final api = await loggedIn();
       await api.post('/couriers/status', body: {'status': 'online'});

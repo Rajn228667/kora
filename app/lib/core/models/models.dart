@@ -542,6 +542,7 @@ class Order {
     GeoPoint? courierLocation,
     String? courierName,
     String? courierId,
+    String? courierPhone,
     List<OrderStatusEntry>? statusHistory,
   }) =>
       Order(
@@ -562,7 +563,7 @@ class Order {
         promoCode: promoCode,
         courierId: courierId ?? this.courierId,
         courierName: courierName ?? this.courierName,
-        courierPhone: courierPhone,
+        courierPhone: courierPhone ?? this.courierPhone,
         courierLocation: courierLocation ?? this.courierLocation,
       );
 

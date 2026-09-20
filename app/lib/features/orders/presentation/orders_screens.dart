@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/maps/map_provider.dart';
 import '../../../core/models/models.dart';
@@ -154,7 +155,8 @@ class _OrderTile extends StatelessWidget {
           Row(
             children: [
               Text(
-                DateFormat('d MMM, HH:mm', 'ru').format(order.createdAt),
+                DateFormat('d MMM, HH:mm', S.lang.name)
+                    .format(order.createdAt),
                 style: AppTypography.caption,
               ),
               const Spacer(),
@@ -188,11 +190,11 @@ class OrderDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final orders = ref.watch(ordersProvider);
-    final order = ref.watch(orderProvider(orderId));
+    final detail = ref.watch(orderDetailProvider(orderId));
+    final order = detail.value;
     if (order == null) {
       // Loading → spinner; loaded but missing → honest error state.
-      if (orders.isLoading) {
+      if (detail.isLoading) {
         return Scaffold(
           appBar: AppBar(leading: const BackButton()),
           body: const KoraLoadingState(),
@@ -202,7 +204,7 @@ class OrderDetailScreen extends ConsumerWidget {
         appBar: AppBar(leading: const BackButton()),
         body: KoraErrorState(
           message: S.t('error.not_found'),
-          onRetry: () => ref.invalidate(ordersProvider),
+          onRetry: () => ref.invalidate(orderDetailProvider(orderId)),
         ),
       );
     }
@@ -258,7 +260,7 @@ class OrderDetailScreen extends ConsumerWidget {
                   children: [
                     Text(order.storeName, style: AppTypography.titleLarge),
                     Text(
-                      DateFormat('d MMMM, HH:mm', 'ru')
+                      DateFormat('d MMMM, HH:mm', S.lang.name)
                           .format(order.createdAt),
                       style: AppTypography.caption,
                     ),
@@ -300,8 +302,18 @@ class OrderDetailScreen extends ConsumerWidget {
                     tooltip: S.t('order.call_courier'),
                     icon: const Icon(AppIcons.call,
                         color: KoraColors.primary,),
-                    onPressed: () =>
-                        context.push('/call/${order.id}?to=courier'),
+                    onPressed: () async {
+                      final phone = order.courierPhone;
+                      if (phone != null &&
+                          phone.isNotEmpty &&
+                          await launchUrl(Uri.parse('tel:$phone'))) {
+                        return;
+                      }
+                      if (context.mounted) {
+                        unawaited(
+                            context.push('/call/${order.id}?to=courier'),);
+                      }
+                    },
                   ),
                 ],
               ),

@@ -7,7 +7,11 @@ import 'core/theme/kora_colors.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('ru');
+  await Future.wait([
+    initializeDateFormatting('ru'),
+    initializeDateFormatting('en'),
+    initializeDateFormatting('kk'),
+  ]);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

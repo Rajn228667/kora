@@ -1011,8 +1011,10 @@ class _PromotionBuilderScreenState
           'code': _code.text.trim().toUpperCase(),
           if (_type == _PromoType.fixed)
             'discountTiyn': (int.tryParse(_value.text) ?? 0) * 100,
-          if (_type == _PromoType.percent)
+          if (_type == _PromoType.percent || _type == _PromoType.firstOrder)
             'percent': int.tryParse(_value.text) ?? 0,
+          if (_type == _PromoType.bogo) 'bogo': true,
+          if (_type == _PromoType.firstOrder) 'firstOrder': true,
           'minOrderTiyn': (int.tryParse(_minOrder.text) ?? 0) * 100,
           if (_productId != null) 'productId': _productId,
         },);

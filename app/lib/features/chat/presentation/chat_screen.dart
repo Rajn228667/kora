@@ -28,6 +28,28 @@ class ChatScreen extends ConsumerStatefulWidget {
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _input = TextEditingController();
   final _scroll = ScrollController();
+  DateTime _lastTypingSent = DateTime.fromMillisecondsSinceEpoch(0);
+
+  @override
+  void initState() {
+    super.initState();
+    _input.addListener(_onTyping);
+  }
+
+  void _onTyping() {
+    // Throttle typing pings to ~1 per 2 s.
+    final now = DateTime.now();
+    if (_input.text.isEmpty ||
+        now.difference(_lastTypingSent) < const Duration(seconds: 2)) {
+      return;
+    }
+    _lastTypingSent = now;
+    final room =
+        ref.read(chatRoomProvider(widget.orderId)).value;
+    if (room != null) {
+      ref.read(chatRepositoryProvider).typing(room.id).ignore();
+    }
+  }
 
   @override
   void dispose() {

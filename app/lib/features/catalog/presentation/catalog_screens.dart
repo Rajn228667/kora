@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/l10n/app_strings.dart';
+import '../../../core/theme/app_animations.dart';
 import '../../../core/models/models.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_metrics.dart';
@@ -68,8 +69,11 @@ class StoreScreen extends ConsumerWidget {
                   child: s.bannerUrl != null
                       ? KoraImage(url: s.bannerUrl, blurHash: s.blurHash)
                       : const Center(
-                          child: Icon(AppIcons.store,
-                              size: 56, color: KoraColors.white,),
+                          child: Icon(
+                            AppIcons.store,
+                            size: 56,
+                            color: KoraColors.white,
+                          ),
                         ),
                 ),
               ),
@@ -87,8 +91,9 @@ class StoreScreen extends ConsumerWidget {
                         ),
                         if (!s.isOpen)
                           KoraStatusChip(
-                              label: S.t('store.closed'),
-                              tone: KoraStatusTone.warning,),
+                            label: S.t('store.closed'),
+                            tone: KoraStatusTone.warning,
+                          ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.xs),
@@ -98,10 +103,13 @@ class StoreScreen extends ConsumerWidget {
                       spacing: AppSpacing.md,
                       runSpacing: AppSpacing.xs,
                       children: [
-                        _InfoChip(icon: AppIcons.star, label: s.rating.toStringAsFixed(1)),
                         _InfoChip(
-                            icon: AppIcons.clock,
-                            label: '${s.etaMinutes} ${S.t('common.min')}',),
+                            icon: AppIcons.star,
+                            label: s.rating.toStringAsFixed(1),),
+                        _InfoChip(
+                          icon: AppIcons.clock,
+                          label: '${s.etaMinutes} ${S.t('common.min')}',
+                        ),
                         _InfoChip(
                           icon: AppIcons.bike,
                           label: s.deliveryFeeTiyn == 0
@@ -125,13 +133,13 @@ class StoreScreen extends ConsumerWidget {
               ),
               error: (_, __) => SliverToBoxAdapter(
                 child: KoraErrorState(
-                    message: S.t('store.products_error'),),
+                  message: S.t('store.products_error'),
+                ),
               ),
               data: (list) => SliverPadding(
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 sliver: SliverGrid(
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     mainAxisSpacing: AppSpacing.md,
                     crossAxisSpacing: AppSpacing.md,
@@ -154,14 +162,17 @@ class StoreScreen extends ConsumerWidget {
                             .read(favoriteProductsProvider.notifier)
                             .toggle(list[i].id),
                         onTap: () => context.push(
-                            '/store/$storeId/product/${list[i].id}',),
+                          '/store/$storeId/product/${list[i].id}',
+                        ),
                         onAdd: () => ref
                             .read(cartProvider.notifier)
                             .add(list[i], 1)
                             .then((_) {
                           if (context.mounted) {
                             KoraSnackbar.show(
-                                context, S.t('product.added'),);
+                              context,
+                              S.t('product.added'),
+                            );
                           }
                         }),
                       );
@@ -256,13 +267,14 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
       ),
       body: product.when(
         loading: () => const KoraLoadingState(),
-        error: (_, __) =>
-            KoraErrorState(message: S.t('product.not_found')),
+        error: (_, __) => KoraErrorState(message: S.t('product.not_found')),
         data: (p) {
           final price = _variantId != null
               ? p.variants
-                  .firstWhere((v) => v.id == _variantId,
-                      orElse: () => p.variants.first,)
+                  .firstWhere(
+                    (v) => v.id == _variantId,
+                    orElse: () => p.variants.first,
+                  )
                   .priceTiyn
               : p.priceTiyn;
           return Column(
@@ -287,12 +299,13 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child:
-                              Text(p.name, style: AppTypography.titleLarge),
+                          child: Text(p.name, style: AppTypography.titleLarge),
                         ),
                         if (p.discountPercent > 0)
                           KoraBadge(
-                              label: '−${p.discountPercent}%', filled: true,),
+                            label: '−${p.discountPercent}%',
+                            filled: true,
+                          ),
                       ],
                     ),
                     if (p.description.isNotEmpty) ...[
@@ -301,8 +314,10 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
                     ],
                     if (p.variants.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.lg),
-                      Text(S.t('product.variant'),
-                          style: AppTypography.label,),
+                      Text(
+                        S.t('product.variant'),
+                        style: AppTypography.label,
+                      ),
                       const SizedBox(height: AppSpacing.sm),
                       Wrap(
                         spacing: AppSpacing.sm,
@@ -310,9 +325,10 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
                             .map(
                               (v) => ChoiceChip(
                                 label: Text(
-                                    '${v.name} · ${KoraPrice.format(v.priceTiyn)}',),
-                                selected: (_variantId ?? p.variants.first.id) ==
-                                    v.id,
+                                  '${v.name} · ${KoraPrice.format(v.priceTiyn)}',
+                                ),
+                                selected:
+                                    (_variantId ?? p.variants.first.id) == v.id,
                                 onSelected: (_) =>
                                     setState(() => _variantId = v.id),
                               ),
@@ -322,13 +338,16 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
                     ],
                     if (p.characteristics.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.lg),
-                      Text(S.t('product.characteristics'),
-                          style: AppTypography.label,),
+                      Text(
+                        S.t('product.characteristics'),
+                        style: AppTypography.label,
+                      ),
                       const SizedBox(height: AppSpacing.sm),
                       ...p.characteristics.entries.map(
                         (e) => Padding(
                           padding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.xxs,),
+                            vertical: AppSpacing.xxs,
+                          ),
                           child: Row(
                             children: [
                               Text(e.key, style: AppTypography.caption),
@@ -348,7 +367,8 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
                   decoration: BoxDecoration(
                     color: KoraColors.surface,
                     border: Border(
-                        top: BorderSide(color: KoraColors.softBorderC),),
+                      top: BorderSide(color: KoraColors.softBorderC),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -369,12 +389,16 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
                               ? () async {
                                   setState(() => _adding = true);
                                   await ref.read(cartProvider.notifier).add(
-                                      p, _qty,
-                                      variantId: _variantId,);
+                                        p,
+                                        _qty,
+                                        variantId: _variantId,
+                                      );
                                   if (context.mounted) {
                                     setState(() => _adding = false);
                                     KoraSnackbar.show(
-                                        context, S.t('product.added'),);
+                                      context,
+                                      S.t('product.added'),
+                                    );
                                   }
                                 }
                               : null,
@@ -392,8 +416,7 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
   }
 }
 
-final productProvider =
-    FutureProvider.family<Product, String>((ref, id) async {
+final productProvider = FutureProvider.family<Product, String>((ref, id) async {
   return ref.watch(catalogRepositoryProvider).product(id);
 });
 
@@ -429,8 +452,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       }
       setState(() => _loading = true);
       try {
-        final res =
-            await ref.read(catalogRepositoryProvider).search(q.trim());
+        final res = await ref.read(catalogRepositoryProvider).search(q.trim());
         if (mounted) {
           setState(() {
             _results = res;
@@ -467,10 +489,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               children: [KoraCardSkeleton(), KoraCardSkeleton()],
             )
           : _results == null
-              ? KoraEmptyState(
-                  icon: AppIcons.search,
-                  title: S.t('search.title'),
-                  message: S.t('search.empty'),
+              ? _SearchSuggestions(
+                  onPick: (q) {
+                    _controller.text = q;
+                    _controller.selection =
+                        TextSelection.collapsed(offset: q.length);
+                    _onQuery(q);
+                  },
                 )
               : _results!.isEmpty
                   ? KoraEmptyState(
@@ -482,13 +507,16 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       padding: const EdgeInsets.all(AppSpacing.lg),
                       children: [
                         if (_results!.stores.isNotEmpty) ...[
-                          Text(S.t('search.stores'),
-                              style: AppTypography.title,),
+                          Text(
+                            S.t('search.stores'),
+                            style: AppTypography.title,
+                          ),
                           const SizedBox(height: AppSpacing.sm),
                           ..._results!.stores.map(
                             (s) => Padding(
                               padding: const EdgeInsets.only(
-                                  bottom: AppSpacing.sm,),
+                                bottom: AppSpacing.sm,
+                              ),
                               child: KoraStoreCard(
                                 name: s.name,
                                 imageUrl: s.logoUrl,
@@ -497,39 +525,57 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                                 etaMinutes: s.etaMinutes,
                                 deliveryFeeTiyn: s.deliveryFeeTiyn,
                                 isOpen: s.isOpen,
-                                onTap: () =>
-                                    context.push('/store/${s.id}'),
+                                onTap: () => context.push('/store/${s.id}'),
                               ),
                             ),
                           ),
                         ],
                         if (_results!.products.isNotEmpty) ...[
-                          Text(S.t('search.products'),
-                              style: AppTypography.title,),
+                          Text(
+                            S.t('search.products'),
+                            style: AppTypography.title,
+                          ),
                           const SizedBox(height: AppSpacing.sm),
                           ..._results!.products.map(
                             (p) => KoraCard(
-                              padding:
-                                  const EdgeInsets.all(AppSpacing.md),
+                              padding: const EdgeInsets.all(AppSpacing.md),
                               onTap: () => context.push(
-                                  '/store/${p.storeId}/product/${p.id}',),
+                                '/store/${p.storeId}/product/${p.id}',
+                              ),
                               child: Row(
                                 children: [
                                   KoraImage(
-                                      url: p.imageUrl,
-                                      blurHash: p.blurHash,
-                                      width: 52,
-                                      height: 52,
-                                      borderRadius: AppRadius.md,),
+                                    url: p.imageUrl,
+                                    blurHash: p.blurHash,
+                                    width: 52,
+                                    height: 52,
+                                    borderRadius: AppRadius.md,
+                                  ),
                                   const SizedBox(width: AppSpacing.md),
                                   Expanded(
-                                    child: Text(p.name,
-                                        style: AppTypography.label,
-                                        maxLines: 2,
-                                        overflow:
-                                            TextOverflow.ellipsis,),
+                                    child: Text(
+                                      p.name,
+                                      style: AppTypography.label,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                   KoraPrice(tiyn: p.priceTiyn),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  if (p.available)
+                                    _QuickAddButton(
+                                      onTap: () => ref
+                                          .read(cartProvider.notifier)
+                                          .add(p, 1)
+                                          .then((_) {
+                                        if (context.mounted) {
+                                          KoraSnackbar.show(
+                                            context,
+                                            S.t('product.added'),
+                                          );
+                                        }
+                                      }),
+                                    ),
                                 ],
                               ),
                             ),
@@ -584,8 +630,7 @@ class CategoryScreen extends ConsumerWidget {
           return ListView.separated(
             padding: const EdgeInsets.all(AppSpacing.lg),
             itemCount: filtered.length,
-            separatorBuilder: (_, __) =>
-                const SizedBox(height: AppSpacing.lg),
+            separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.lg),
             itemBuilder: (_, i) => KoraStoreHeroCard(
               name: filtered[i].name,
               imageUrl: filtered[i].bannerUrl ?? filtered[i].logoUrl,
@@ -599,6 +644,109 @@ class CategoryScreen extends ConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Search helpers — popular categories + recently viewed as suggestions,
+// quick-add button on product rows.
+// ---------------------------------------------------------------------------
+
+class _SearchSuggestions extends ConsumerWidget {
+  const _SearchSuggestions({required this.onPick});
+
+  final ValueChanged<String> onPick;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cats = ref.watch(categoriesProvider).value ?? const [];
+    final recent = ref.watch(recentlyViewedProvider).value ?? const [];
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      children: [
+        if (cats.isNotEmpty) ...[
+          Text(S.t('home.categories'), style: AppTypography.title),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: cats
+                .map(
+                  (c) => ActionChip(
+                    label: Text(c.name),
+                    onPressed: () => onPick(c.name),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+        ],
+        if (recent.isNotEmpty) ...[
+          Text(S.t('home.recent'), style: AppTypography.title),
+          const SizedBox(height: AppSpacing.sm),
+          ...recent.take(5).map(
+                (p) => KoraCard(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  onTap: () =>
+                      context.push('/store/${p.storeId}/product/${p.id}'),
+                  child: Row(
+                    children: [
+                      KoraImage(
+                        url: p.imageUrl,
+                        blurHash: p.blurHash,
+                        width: 44,
+                        height: 44,
+                        borderRadius: AppRadius.md,
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Text(
+                          p.name,
+                          style: AppTypography.label,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      KoraPrice(tiyn: p.priceTiyn),
+                    ],
+                  ),
+                ),
+              ),
+        ] else
+          KoraEmptyState(
+            icon: AppIcons.search,
+            title: S.t('search.title'),
+            message: S.t('search.empty'),
+          ),
+      ],
+    );
+  }
+}
+
+class _QuickAddButton extends StatelessWidget {
+  const _QuickAddButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return KoraPressable(
+      onTap: onTap,
+      semanticLabel: S.t('product.add_to_cart_short'),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: const BoxDecoration(
+          gradient: KoraColors.primaryGradient,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          AppIcons.add,
+          color: KoraColors.white,
+          size: 20,
+        ),
       ),
     );
   }

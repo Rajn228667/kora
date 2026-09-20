@@ -543,9 +543,26 @@ class MockApiClient implements ApiClient {
       final scopeOk = scoped == null ||
           _cartItems.any((i) => i.product.id == scoped);
       if (subtotal >= (p['minOrderTiyn'] as int? ?? 0) && scopeOk) {
-        final fixed = p['discountTiyn'] as int? ?? 0;
-        final pct = p['percent'] as int?;
-        discount = pct != null ? subtotal * pct ~/ 100 : fixed;
+        if (p['bogo'] == true) {
+          // 2+1: every 3rd unit of scoped products is free (cheapest).
+          final units = <int>[];
+          for (final i in _cartItems) {
+            if (scoped == null || i.product.id == scoped) {
+              units.addAll(List.filled(i.quantity, i.priceTiyn));
+            }
+          }
+          units.sort();
+          discount = units
+              .take(units.length ~/ 3)
+              .fold(0, (s, v) => s + v);
+        } else if (p['firstOrder'] == true &&
+            _orders.any((o) => o.status == OrderStatus.delivered)) {
+          discount = 0; // only for the first delivered order
+        } else {
+          final fixed = p['discountTiyn'] as int? ?? 0;
+          final pct = p['percent'] as int?;
+          discount = pct != null ? subtotal * pct ~/ 100 : fixed;
+        }
       }
     }
     final order = Order(
@@ -583,18 +600,17 @@ class MockApiClient implements ApiClient {
       ],
       promoCode: promo,
     );
+    // Wallet payment validates the balance BEFORE the cart is consumed.
+    if (method == 'wallet' && _walletBalanceTiyn < order.totalTiyn) {
+      throw const ApiException(
+          code: 'INSUFFICIENT_FUNDS',
+          message: 'Недостаточно бонусов на кошельке',
+          statusCode: 402,);
+    }
     _orders.insert(0, order);
     _cartItems.clear();
     _cartStoreId = null;
-    // Wallet payment debits the bonus balance right away.
     if (method == 'wallet') {
-      if (_walletBalanceTiyn < order.totalTiyn) {
-        _orders.removeWhere((o) => o.id == order.id);
-        throw const ApiException(
-            code: 'INSUFFICIENT_FUNDS',
-            message: 'Недостаточно бонусов на кошельке',
-            statusCode: 402,);
-      }
       _walletBalanceTiyn -= order.totalTiyn;
       _walletTxns.insert(0, {
         'id': _id('txn'),
@@ -659,11 +675,18 @@ class MockApiClient implements ApiClient {
         OrderStatusEntry(status: s, actorRole: role, at: DateTime.now());
 
     void setStatus(OrderStatus s, UserRole role,
-        {String? courierName, String? courierId,}) {
+        {String? courierName, String? courierId, String? courierPhone,}) {
+      final i0 = _orders.indexWhere((o) => o.id == orderId);
+      if (i0 < 0 ||
+          _orders[i0].status == OrderStatus.cancelled ||
+          _orders[i0].status == OrderStatus.delivered) {
+        return; // a cancelled/delivered order no longer progresses
+      }
       mutate((o) => o.copyWith(
             status: s,
             courierName: courierName,
             courierId: courierId,
+            courierPhone: courierPhone,
             statusHistory: [...o.statusHistory, entry(s, role)],
           ),);
       realtime?.emit('order.status_changed',
@@ -697,7 +720,8 @@ class MockApiClient implements ApiClient {
     });
     Timer(const Duration(seconds: 48), () {
       setStatus(OrderStatus.courierAssigned, UserRole.admin,
-          courierId: 'u-courier', courierName: 'Арман',);
+          courierId: 'u-courier', courierName: 'Арман',
+          courierPhone: '+77000000003',);
       realtime?.emit('courier.assigned',
           {'orderId': orderId, 'courierName': 'Арман'},);
       _pushNotif('Курьер назначен', 'Арман уже забирает ваш заказ',
@@ -725,7 +749,11 @@ class MockApiClient implements ApiClient {
         lng: from.lng + (to.lng - from.lng) * k,
       );
       final idx = _orders.indexWhere((o) => o.id == orderId);
-      if (idx >= 0) {
+      if (idx < 0 || _orders[idx].status == OrderStatus.cancelled) {
+        t.cancel();
+        return;
+      }
+      {
         _orders[idx] = _orders[idx].copyWith(courierLocation: pos);
         if (tick == 2) {
           _orders[idx] = _orders[idx].copyWith(
@@ -803,6 +831,20 @@ class MockApiClient implements ApiClient {
             statusCode: 409,);
       }
       final i = _orders.indexWhere((o) => o.id == order.id);
+      // Bonus payments go back to the wallet instantly.
+      if (order.paymentStatus == PaymentStatus.paid &&
+          _walletTxns.any((t) =>
+              t['kind'] == 'spend' &&
+              (t['title'] as String).contains(order.number),)) {
+        _walletBalanceTiyn += order.totalTiyn;
+        _walletTxns.insert(0, {
+          'id': _id('txn'),
+          'kind': 'refund',
+          'amountTiyn': order.totalTiyn,
+          'title': 'Возврат за заказ ${order.number}',
+          'at': DateTime.now().toIso8601String(),
+        },);
+      }
       _orders[i] = order.copyWith(
         status: OrderStatus.cancelled,
         paymentStatus: PaymentStatus.refunded,
@@ -918,7 +960,10 @@ class MockApiClient implements ApiClient {
                 : null,
           );
           _chatMessages[roomId]!.add(msg);
-          // Simulated peer reply.
+          // Simulated peer reply — typing indicator first.
+          Timer(const Duration(milliseconds: 1200), () {
+            realtime?.emit('chat.typing', {'roomId': roomId});
+          });
           Timer(const Duration(seconds: 3), () {
             final reply = ChatMessage(
               id: _id('msg'),
@@ -1009,6 +1054,7 @@ class MockApiClient implements ApiClient {
             courierLocation: _lastCourierPoint,
             courierId: _uid,
             courierName: _user?.name ?? 'Курьер',
+            courierPhone: _user?.phone ?? '+77000000003',
             statusHistory: [
               ..._orders[i].statusHistory,
               OrderStatusEntry(
@@ -1433,6 +1479,8 @@ class MockApiClient implements ApiClient {
                 (b['minOrderTiyn'] as num?)?.toInt() ?? 0,
             if (b['productId'] != null)
               'productId': b['productId'] as String,
+            if (b['bogo'] == true) 'bogo': true,
+            if (b['firstOrder'] == true) 'firstOrder': true,
           };
           return {'code': code, ..._promoCodes[code]!};
         }
@@ -1610,12 +1658,40 @@ class MockApiClient implements ApiClient {
         'message': 'Промокод действует только на выбранный товар',
       };
     }
+    if (promo['firstOrder'] == true &&
+        _orders.any((o) => o.status == OrderStatus.delivered)) {
+      return {
+        'valid': false,
+        'message': 'Промокод действует только на первый заказ',
+      };
+    }
+    var discountTiyn = promo['discountTiyn'] as int? ?? 0;
+    if (promo['bogo'] == true) {
+      final units = <int>[];
+      for (final i in _cartItems) {
+        if (productId == null || i.product.id == productId) {
+          units.addAll(List.filled(i.quantity, i.priceTiyn));
+        }
+      }
+      units.sort();
+      discountTiyn =
+          units.take(units.length ~/ 3).fold(0, (s, v) => s + v);
+      if (discountTiyn == 0) {
+        return {
+          'valid': false,
+          'message': 'Добавьте минимум 3 товара — третий будет бесплатным',
+        };
+      }
+    }
     return {
       'valid': true,
-      'discountTiyn': promo['discountTiyn'] as int? ?? 0,
+      'discountTiyn': discountTiyn,
       'percent': promo['percent'] as int?,
       'minOrderTiyn': promo['minOrderTiyn'] as int? ?? 0,
-      'message': 'Промокод $code применён',
+      'bogo': promo['bogo'] == true,
+      'message': promo['bogo'] == true
+          ? '2+1 — третий товар бесплатно'
+          : 'Промокод $code применён',
     };
   }
 

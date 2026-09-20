@@ -95,6 +95,8 @@ abstract final class S {
     'home.notifications': 'Уведомления',
     'home.stores': 'Магазины и рестораны',
     'home.free_delivery': '0 ₸ доставка',
+    'home.categories': 'Категории',
+    'home.recent': 'Вы смотрели',
     'home.load_error': 'Не удалось загрузить магазины',
 
     // search
@@ -119,6 +121,7 @@ abstract final class S {
     'product.variant': 'Вариант',
     'product.characteristics': 'Характеристики',
     'product.add_to_cart': 'В корзину · {price}',
+    'product.add_to_cart_short': 'В корзину',
     'product.added': 'Добавлено в корзину',
     'product.out_of_stock': 'Нет в наличии',
     'product.qty_minus': 'Уменьшить количество',
@@ -638,6 +641,8 @@ abstract final class S {
     'home.notifications': 'Хабарламалар',
     'home.stores': 'Дүкендер мен мейрамханалар',
     'home.free_delivery': '0 ₸ жеткізу',
+    'home.categories': 'Санаттар',
+    'home.recent': 'Сіз көрдіңіз',
     'home.load_error': 'Дүкендерді жүктеу мүмкін болмады',
 
     'search.title': 'KORA бойынша іздеу',
@@ -659,6 +664,7 @@ abstract final class S {
     'product.variant': 'Нұсқа',
     'product.characteristics': 'Сипаттамалар',
     'product.add_to_cart': 'Себетке · {price}',
+    'product.add_to_cart_short': 'Себетке',
     'product.added': 'Себетке қосылды',
     'product.out_of_stock': 'Қоймада жоқ',
     'product.qty_minus': 'Санын азайту',
@@ -1156,6 +1162,8 @@ abstract final class S {
     'home.notifications': 'Notifications',
     'home.stores': 'Stores and restaurants',
     'home.free_delivery': '0 ₸ delivery',
+    'home.categories': 'Categories',
+    'home.recent': 'You viewed',
     'home.load_error': 'Failed to load stores',
 
     'search.title': 'Search KORA',
@@ -1177,6 +1185,7 @@ abstract final class S {
     'product.variant': 'Variant',
     'product.characteristics': 'Characteristics',
     'product.add_to_cart': 'Add to cart · {price}',
+    'product.add_to_cart_short': 'Add to cart',
     'product.added': 'Added to cart',
     'product.out_of_stock': 'Out of stock',
     'product.qty_minus': 'Decrease quantity',
