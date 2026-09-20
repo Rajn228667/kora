@@ -188,11 +188,22 @@ class OrderDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final orders = ref.watch(ordersProvider);
     final order = ref.watch(orderProvider(orderId));
     if (order == null) {
+      // Loading → spinner; loaded but missing → honest error state.
+      if (orders.isLoading) {
+        return Scaffold(
+          appBar: AppBar(leading: const BackButton()),
+          body: const KoraLoadingState(),
+        );
+      }
       return Scaffold(
         appBar: AppBar(leading: const BackButton()),
-        body: const KoraLoadingState(),
+        body: KoraErrorState(
+          message: S.t('error.not_found'),
+          onRetry: () => ref.invalidate(ordersProvider),
+        ),
       );
     }
     final showMap = {

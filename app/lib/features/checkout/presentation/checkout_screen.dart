@@ -40,6 +40,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   final _comment = TextEditingController();
   bool _placing = false;
   List<CheckoutIssue>? _issues;
+  String _method = 'kaspi';
 
   @override
   void initState() {
@@ -97,13 +98,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         });
         return;
       }
+      final promo = ref.read(appliedPromoProvider);
       final result = await ref.read(checkoutRepositoryProvider).checkout(
             addressId: _pickedPoint == null ? _address?.id : null,
             point: _deliveryPoint,
             address: _deliveryAddress,
             comment: _comment.text.trim(),
-            promoCode: widget.promoCode,
+            promoCode: widget.promoCode ?? promo?.code,
+            paymentMethod: _method,
           );
+      ref.read(appliedPromoProvider.notifier).state = null;
       ref.invalidate(cartProvider);
       ref.invalidate(ordersProvider);
       if (!mounted) return;
@@ -176,21 +180,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           const SizedBox(height: AppSpacing.xl),
           Text(S.t('checkout.payment'), style: AppTypography.title),
           const SizedBox(height: AppSpacing.sm),
-          const KoraCard(
-            child: Row(
-              children: [
-                Icon(AppIcons.wallet, color: KoraColors.primary),
-                SizedBox(width: AppSpacing.md),
-                Expanded(child: Text('Kaspi')),
-                Icon(AppIcons.check, color: KoraColors.primary),
-              ],
-            ),
+          _PaymentMethodPicker(
+            method: _method,
+            onChanged: (m) => setState(() => _method = m),
           ),
           const SizedBox(height: AppSpacing.xl),
           if (cart != null)
             _Summary(
               cart: cart,
-              discount: widget.discountTiyn,
+              discount: widget.discountTiyn > 0
+                  ? widget.discountTiyn
+                  : ref.watch(appliedPromoProvider)?.discountTiyn ?? 0,
             ),
           const SizedBox(height: AppSpacing.xl),
           KoraButton(
@@ -525,6 +525,54 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PaymentMethodPicker extends StatelessWidget {
+  const _PaymentMethodPicker({
+    required this.method,
+    required this.onChanged,
+  });
+
+  final String method;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    const methods = [
+      ('kaspi', AppIcons.card, 'pay.kaspi'),
+      ('wallet', AppIcons.wallet, 'pay.wallet'),
+      ('cash', AppIcons.cash, 'pay.cash'),
+    ];
+    return Column(
+      children: [
+        for (final (id, icon, key) in methods)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: KoraCard(
+              onTap: () => onChanged(id),
+              child: Row(
+                children: [
+                  Icon(icon, color: KoraColors.primary),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Text(S.t(key), style: AppTypography.label),
+                  ),
+                  Icon(
+                    method == id
+                        ? Icons.radio_button_checked_rounded
+                        : Icons.radio_button_off_rounded,
+                    color: method == id
+                        ? KoraColors.primary
+                        : KoraColors.placeholderC,
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

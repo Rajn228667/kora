@@ -276,5 +276,103 @@ void main() {
         isTrue,
       );
     });
+
+    test('wallet payment debits balance and adds spend txn', () async {
+      final api = await loggedIn();
+      final before = (await api.get('/users/me/wallet')
+          as Map<String, dynamic>)['balanceTiyn'] as int;
+      await api.post('/cart/items',
+          body: {'productId': 'p-samsa', 'qty': 1},);
+      final checkout = await api.post('/checkout', body: {
+        'address': 'A',
+        'paymentMethod': 'wallet',
+      },) as Map<String, dynamic>;
+      final order = checkout['order'] as Map;
+      expect(order['paymentStatus'], 'paid');
+      final after = (await api.get('/users/me/wallet')
+          as Map<String, dynamic>)['balanceTiyn'] as int;
+      expect(after, lessThan(before));
+      final txns = await api.get('/users/me/wallet/transactions')
+          as Map<String, dynamic>;
+      expect((txns['items'] as List).any(
+          (t) => (t as Map)['kind'] == 'spend',), isTrue,);
+    });
+
+    test('wallet payment with insufficient funds → 402', () async {
+      final api = await loggedIn();
+      await api.post('/cart/items',
+          body: {'productId': 'p-plov', 'qty': 40},);
+      try {
+        await api.post('/checkout', body: {
+          'address': 'A',
+          'paymentMethod': 'wallet',
+        },);
+        fail('should have thrown');
+      } on ApiException catch (e) {
+        expect(e.code, 'INSUFFICIENT_FUNDS');
+      }
+    });
+
+    test('support ticket keeps first message + thread replies', () async {
+      final api = await loggedIn();
+      final created = await api.post('/support/tickets', body: {
+        'subject': 'Тест',
+        'message': 'Первое сообщение',
+      },) as Map<String, dynamic>;
+      final id = created['id'] as String;
+      expect((created['messages'] as List).length, 1);
+      await api.post('/support/tickets/$id/messages',
+          body: {'text': 'Ещё вопрос'},);
+      final detail = await api.get('/support/tickets/$id')
+          as Map<String, dynamic>;
+      expect((detail['messages'] as List).length, 2);
+    });
+
+    test('notifications: mark-read + persisted preferences', () async {
+      final api = await loggedIn();
+      await api.post('/notifications/read', body: const {});
+      final feed = await api.get('/notifications') as Map<String, dynamic>;
+      expect((feed['items'] as List)
+          .every((n) => (n as Map)['read'] == true), isTrue,);
+      await api.post('/notifications/preferences',
+          body: {'promos': false},);
+      final prefs = await api.get('/notifications/preferences')
+          as Map<String, dynamic>;
+      expect((prefs['preferences'] as Map)['promos'], false);
+      expect((prefs['preferences'] as Map)['orders'], true);
+    });
+
+    test('admin can block and unblock a user', () async {
+      final api = await loggedIn();
+      final users = await api.get('/admin/users') as Map<String, dynamic>;
+      final uid = ((users['items'] as List).last as Map)['id'] as String;
+      await api.post('/admin/users/$uid/block', body: {'blocked': true});
+      var res = await api.get('/admin/users') as Map<String, dynamic>;
+      final blocked = (res['items'] as List)
+          .firstWhere((u) => (u as Map)['id'] == uid) as Map;
+      expect(blocked['blocked'], isTrue);
+      await api.post('/admin/users/$uid/block', body: {'blocked': false});
+      res = await api.get('/admin/users') as Map<String, dynamic>;
+      final unblocked = (res['items'] as List)
+          .firstWhere((u) => (u as Map)['id'] == uid) as Map;
+      expect(unblocked['blocked'], isFalse);
+    });
+
+    test('courier assignment advances a real order', () async {
+      final api = await loggedIn();
+      await api.post('/couriers/status', body: {'status': 'online'});
+      final offers = await api.get('/couriers/assignments')
+          as Map<String, dynamic>;
+      final offer = (offers['items'] as List).first as Map;
+      await api
+          .post('/couriers/assignments/${offer['id']}/accept');
+      final updated = await api.post(
+          '/couriers/orders/${offer['orderId']}/status',
+          body: {'status': 'pickedUp'},) as Map<String, dynamic>;
+      expect(updated['status'], 'pickedUp');
+      final detail = await api.get('/orders/${offer['orderId']}')
+          as Map<String, dynamic>;
+      expect(detail['id'], offer['orderId']);
+    });
   });
 }

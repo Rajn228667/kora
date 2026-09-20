@@ -84,6 +84,11 @@ final checkoutRepositoryProvider = Provider<CheckoutRepository>(
   (ref) => CheckoutRepository(ref.watch(apiClientProvider)),
 );
 
+/// Promo applied outside the cart (e.g. Profile → Promo) — consumed by
+/// checkout so the discount actually reaches the order.
+final appliedPromoProvider =
+    StateProvider<({String code, int discountTiyn})?>((_) => null);
+
 final addressesProvider = AsyncNotifierProvider<AddressesController,
     List<Address>>(AddressesController.new);
 

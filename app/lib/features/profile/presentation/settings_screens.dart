@@ -12,6 +12,7 @@ import '../../../core/widgets/feedback.dart';
 import '../../../core/widgets/fields.dart';
 import '../../../core/widgets/misc.dart';
 import '../../catalog/data/catalog_repository.dart';
+import '../../checkout/data/checkout_repository.dart';
 
 /// Settings → Appearance: theme (light/dark/system), language (ru/kk/en),
 /// animation info. Changes apply instantly — no restart needed.
@@ -80,28 +81,17 @@ class AppearanceScreen extends ConsumerWidget {
           Text(S.t('settings.animations'), style: AppTypography.overline),
           const SizedBox(height: AppSpacing.sm),
           KoraCard(
-            child: Row(
-              children: [
-                const Icon(AppIcons.animations,
-                    color: KoraColors.primary, size: 20,),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(S.t('settings.anim_full'),
-                          style: AppTypography.label,),
-                      Text(S.t('settings.anim_sub'),
-                          style: AppTypography.caption,),
-                    ],
-                  ),
-                ),
-                Icon(AppIcons.check,
-                    color: KoraTheme.dark
-                        ? KoraColors.softPurple
-                        : KoraColors.primary,
-                    size: 20,),
-              ],
+            padding: EdgeInsets.zero,
+            child: SwitchListTile(
+              value: !settings.reduceMotion,
+              onChanged: (v) => ctrl.setReduceMotion(!v),
+              secondary: const Icon(AppIcons.animations,
+                  color: KoraColors.primary, size: 20,),
+              title: Text(S.t('settings.anim_full'),
+                  style: AppTypography.label,),
+              subtitle: Text(S.t('settings.anim_sub'),
+                  style: AppTypography.caption,),
+              activeThumbColor: KoraColors.primary,
             ),
           ),
         ],
@@ -148,6 +138,10 @@ class _PromoScreenState extends ConsumerState<PromoScreen> {
           .validatePromo(code, '');
       if (res.valid) {
         setState(() => _result = res);
+        ref.read(appliedPromoProvider.notifier).state = (
+          code: code.toUpperCase(),
+          discountTiyn: res.discountTiyn,
+        );
         if (mounted) {
           KoraSnackbar.show(context, S.t('promo.applied'));
         }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_animations.dart';
@@ -362,6 +363,16 @@ class ReferralScreen extends ConsumerWidget {
               KoraButton(
                 label: S.t('referral.share'),
                 icon: AppIcons.share,
+                onPressed: () {
+                  SharePlus.instance.share(ShareParams(
+                    text: S.t('referral.share_text', {'code': code}),
+                  ),);
+                },
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              KoraOutlinedButton(
+                label: S.t('referral.copy'),
+                icon: AppIcons.doc,
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: code));
                   KoraSnackbar.show(context, S.t('common.copied'));

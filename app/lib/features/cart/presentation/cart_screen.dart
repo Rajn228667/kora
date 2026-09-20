@@ -13,6 +13,7 @@ import '../../../core/widgets/feedback.dart';
 import '../../../core/widgets/fields.dart';
 import '../../../core/widgets/misc.dart';
 import '../../catalog/data/catalog_repository.dart';
+import '../../checkout/data/checkout_repository.dart';
 import '../data/cart_repository.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
@@ -28,6 +29,18 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   String? _promoCode;
   String? _promoMessage;
   bool _promoLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Promo applied via Profile → Promo prefills the cart field.
+    final applied = ref.read(appliedPromoProvider);
+    if (applied != null) {
+      _promoController.text = applied.code;
+      _promoCode = applied.code;
+      _promoDiscount = applied.discountTiyn;
+    }
+  }
 
   @override
   void dispose() {
@@ -52,6 +65,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       if (res.valid) {
         _promoDiscount = res.discountTiyn;
         _promoCode = code;
+        ref.read(appliedPromoProvider.notifier).state =
+            (code: code.toUpperCase(), discountTiyn: res.discountTiyn);
       }
     });
   }

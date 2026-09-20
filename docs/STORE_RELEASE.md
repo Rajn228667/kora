@@ -35,7 +35,7 @@ submission; checkboxes are designed to be copied into a release ticket.
 ### iOS
 
 - [ ] Distribution certificate + App Store provisioning profile for
-      `kz.kora.app` (`APNS_BUNDLE_ID`) in the Apple Developer account.
+      `kz.kora.kora` (`APNS_BUNDLE_ID`) in the Apple Developer account.
 - [ ] Xcode "Automatically manage signing" or match/fastlane; certs stored
       in secret vault, never committed.
 - [ ] APNs key (`.p8`) configured — same key used for `APNS_KEY_ID` backend env.
@@ -98,8 +98,9 @@ are the source of truth for both Google Play **Data Safety** and Apple
 ```
 Demo accounts (OTP flows — use fixed codes if SMS unreachable):
   Customer: +7 700 000 00 01   OTP: provided on request / test backend
-  Courier:  +7 700 000 00 02
-  Manager:  +7 700 000 00 03
+  Manager:  +7 700 000 00 02
+  Courier:  +7 700 000 00 03
+  Admin:    +7 700 000 00 04
 Demo store "KORA Demo" is pre-seeded on staging; the customer flow:
 register → browse store → checkout (Kaspi sandbox payment) → track order.
 Courier flow requires location permission for live tracking.

@@ -9,21 +9,29 @@ class AppSettings {
   const AppSettings({
     this.themeMode = ThemeMode.system,
     this.language = AppLanguage.ru,
+    this.reduceMotion = false,
   });
 
   final ThemeMode themeMode;
   final AppLanguage language;
+  final bool reduceMotion;
 
-  AppSettings copyWith({ThemeMode? themeMode, AppLanguage? language}) =>
+  AppSettings copyWith({
+    ThemeMode? themeMode,
+    AppLanguage? language,
+    bool? reduceMotion,
+  }) =>
       AppSettings(
         themeMode: themeMode ?? this.themeMode,
         language: language ?? this.language,
+        reduceMotion: reduceMotion ?? this.reduceMotion,
       );
 }
 
 class SettingsController extends Notifier<AppSettings> {
   static const _kTheme = 'kora.theme';
   static const _kLang = 'kora.lang';
+  static const _kMotion = 'kora.reduce_motion';
 
   @override
   AppSettings build() {
@@ -43,6 +51,7 @@ class SettingsController extends Notifier<AppSettings> {
         (l) => l.name == langName,
         orElse: () => AppLanguage.ru,
       ),
+      reduceMotion: p.getBool(_kMotion) ?? false,
     );
     S.lang = state.language;
   }
@@ -58,6 +67,12 @@ class SettingsController extends Notifier<AppSettings> {
     S.lang = lang;
     final p = await SharedPreferences.getInstance();
     await p.setString(_kLang, lang.name);
+  }
+
+  Future<void> setReduceMotion(bool value) async {
+    state = state.copyWith(reduceMotion: value);
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(_kMotion, value);
   }
 }
 

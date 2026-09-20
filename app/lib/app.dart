@@ -115,6 +115,11 @@ class _KoraAppState extends ConsumerState<KoraApp> {
                 isDark ? Brightness.light : Brightness.dark,
           ),
         );
+        final mq = MediaQuery.of(context);
+        final content = MediaQuery(
+          data: mq.copyWith(disableAnimations: settings.reduceMotion),
+          child: child ?? const SizedBox.shrink(),
+        );
         return Column(
           children: [
             if (_offline)
@@ -134,7 +139,7 @@ class _KoraAppState extends ConsumerState<KoraApp> {
                       .copyWith(color: KoraColors.white),
                 ),
               ),
-            Expanded(child: child ?? const SizedBox.shrink()),
+            Expanded(child: content),
           ],
         );
       },

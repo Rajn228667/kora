@@ -70,8 +70,47 @@ class CartController extends AsyncNotifier<Cart> {
 
   Future<void> add(Product product, int qty, {String? variantId}) async {
     final repo = ref.read(cartRepositoryProvider);
-    state = AsyncData(await repo.addItem(product.id, qty,
-        variantId: variantId,),);
+    final prev = state.value;
+    // Optimistic: reflect the add instantly, reconcile with server after.
+    if (prev != null) {
+      final items = [...prev.items];
+      final idx = items.indexWhere((i) =>
+          i.product.id == product.id && i.variantId == variantId,);
+      if (idx >= 0) {
+        items[idx] = CartItem(
+          id: items[idx].id,
+          product: items[idx].product,
+          quantity: items[idx].quantity + qty,
+          variantId: items[idx].variantId,
+        );
+      } else {
+        items.add(CartItem(
+          id: 'opt-${product.id}-${DateTime.now().millisecondsSinceEpoch}',
+          product: product,
+          quantity: qty,
+          variantId: variantId,
+        ),);
+      }
+      final subtotal =
+          items.fold<int>(0, (s, i) => s + i.priceTiyn * i.quantity);
+      state = AsyncData(Cart(
+        storeId: prev.storeId,
+        storeName: prev.storeName,
+        items: items,
+        subtotalTiyn: subtotal,
+        deliveryTiyn: prev.deliveryTiyn,
+        discountTiyn: prev.discountTiyn,
+        totalTiyn: subtotal + prev.deliveryTiyn - prev.discountTiyn,
+        promoCode: prev.promoCode,
+      ),);
+    }
+    try {
+      state = AsyncData(await repo.addItem(product.id, qty,
+          variantId: variantId,),);
+    } catch (_) {
+      if (prev != null) state = AsyncData(prev);
+      rethrow;
+    }
   }
 
   Future<void> setQty(String itemId, int qty) async {

@@ -80,6 +80,7 @@ class ChatController extends FamilyAsyncNotifier<ChatRoom, String> {
     final repo = ref.watch(chatRepositoryProvider);
     final room = await repo.roomForOrder(orderId);
     final msgs = await repo.messages(room.id);
+    unawaited(repo.markRead(room.id).catchError((_) {}));
     unawaited(_sub?.cancel());
     _sub = ref.watch(realtimeProvider).events.listen(_onEvent);
     ref.onDispose(() => _sub?.cancel());
@@ -148,6 +149,15 @@ class ChatController extends FamilyAsyncNotifier<ChatRoom, String> {
     await ref
         .read(chatRepositoryProvider)
         .send(room.id, type: ChatMessageType.location, lat: lat, lng: lng);
+    ref.invalidateSelf();
+  }
+
+  Future<void> sendImage(String mediaUrl) async {
+    final room = state.value;
+    if (room == null) return;
+    await ref
+        .read(chatRepositoryProvider)
+        .send(room.id, type: ChatMessageType.image, mediaUrl: mediaUrl);
     ref.invalidateSelf();
   }
 }

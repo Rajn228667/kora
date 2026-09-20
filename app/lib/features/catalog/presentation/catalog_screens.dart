@@ -428,13 +428,23 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         return;
       }
       setState(() => _loading = true);
-      final res =
-          await ref.read(catalogRepositoryProvider).search(q.trim());
-      if (mounted) {
-        setState(() {
-          _results = res;
-          _loading = false;
-        });
+      try {
+        final res =
+            await ref.read(catalogRepositoryProvider).search(q.trim());
+        if (mounted) {
+          setState(() {
+            _results = res;
+            _loading = false;
+          });
+        }
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            _loading = false;
+            _results = const SearchResults(stores: [], products: []);
+          });
+          KoraSnackbar.show(context, S.t('common.error'), isError: true);
+        }
       }
     });
   }
@@ -575,10 +585,11 @@ class CategoryScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(AppSpacing.lg),
             itemCount: filtered.length,
             separatorBuilder: (_, __) =>
-                const SizedBox(height: AppSpacing.sm),
-            itemBuilder: (_, i) => KoraStoreCard(
+                const SizedBox(height: AppSpacing.lg),
+            itemBuilder: (_, i) => KoraStoreHeroCard(
               name: filtered[i].name,
-              imageUrl: filtered[i].logoUrl,
+              imageUrl: filtered[i].bannerUrl ?? filtered[i].logoUrl,
+              blurHash: filtered[i].blurHash,
               category: filtered[i].description,
               rating: filtered[i].rating,
               etaMinutes: filtered[i].etaMinutes,

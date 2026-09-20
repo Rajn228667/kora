@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/maps/map_provider.dart';
 import '../../../core/models/models.dart';
@@ -57,6 +58,11 @@ class CourierRepository {
   Future<void> respond(String offerId, bool accept) => _ref
       .read(apiClientProvider)
       .post('/couriers/assignments/$offerId/${accept ? 'accept' : 'reject'}');
+
+  /// Courier advances the active delivery: pickedUp → delivering → delivered.
+  Future<void> advanceOrder(String orderId, String status) => _ref
+      .read(apiClientProvider)
+      .post('/couriers/orders/$orderId/status', body: {'status': status});
 }
 
 final courierRepoProvider = Provider((ref) => CourierRepository(ref));
@@ -85,6 +91,8 @@ class CourierScreen extends ConsumerStatefulWidget {
 class _CourierScreenState extends ConsumerState<CourierScreen> {
   bool _online = false;
   bool _delivering = false;
+  CourierOffer? _active;
+  int _activeStep = 0; // 0 → to store, 1 → picked up, 2 → en route
   StreamSubscription<Position>? _gps;
   final _throttle = Throttler(const Duration(seconds: 5));
 
@@ -102,7 +110,11 @@ class _CourierScreenState extends ConsumerState<CourierScreen> {
       _startGps();
     } else {
       await _gps?.cancel();
-      setState(() => _delivering = false);
+      setState(() {
+        _delivering = false;
+        _active = null;
+        _activeStep = 0;
+      });
     }
   }
 
@@ -188,6 +200,17 @@ class _CourierScreenState extends ConsumerState<CourierScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
+          if (_active != null) ...[
+            _ActiveDelivery(
+              offer: _active!,
+              step: _activeStep,
+              onAdvance: _advance,
+              onChat: () => context.push('/chat/${_active!.orderId}'),
+              onOpenOrder: () =>
+                  context.push('/orders/${_active!.orderId}'),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+          ],
           Text(S.t('courier.offers'), style: AppTypography.title),
           const SizedBox(height: AppSpacing.sm),
           if (!_online)
@@ -222,7 +245,11 @@ class _CourierScreenState extends ConsumerState<CourierScreen> {
                                     await ref
                                         .read(courierRepoProvider)
                                         .respond(o.id, true);
-                                    setState(() => _delivering = true);
+                                    setState(() {
+                                      _delivering = true;
+                                      _active = o;
+                                      _activeStep = 0;
+                                    });
                                     await ref
                                         .read(courierOffersProvider
                                             .notifier,)
@@ -244,6 +271,140 @@ class _CourierScreenState extends ConsumerState<CourierScreen> {
             ),
         ],
       ),
+    );
+  }
+
+  Future<void> _advance() async {
+    final offer = _active;
+    if (offer == null) return;
+    const steps = ['pickedUp', 'delivering', 'delivered'];
+    final status = steps[_activeStep];
+    try {
+      await ref
+          .read(courierRepoProvider)
+          .advanceOrder(offer.orderId, status);
+      if (!mounted) return;
+      if (status == 'delivered') {
+        setState(() {
+          _active = null;
+          _activeStep = 0;
+          _delivering = false;
+        });
+        KoraSnackbar.show(context, S.t('courier.done'));
+        await ref.read(courierOffersProvider.notifier).refresh();
+      } else {
+        setState(() => _activeStep++);
+      }
+    } catch (_) {
+      if (mounted) {
+        KoraSnackbar.show(context, S.t('common.error'), isError: true);
+      }
+    }
+  }
+}
+
+/// Active delivery panel: pickup → deliver progression + shortcuts to
+/// the order detail and customer chat.
+class _ActiveDelivery extends StatelessWidget {
+  const _ActiveDelivery({
+    required this.offer,
+    required this.step,
+    required this.onAdvance,
+    required this.onChat,
+    required this.onOpenOrder,
+  });
+
+  final CourierOffer offer;
+  final int step;
+  final VoidCallback onAdvance;
+  final VoidCallback onChat;
+  final VoidCallback onOpenOrder;
+
+  @override
+  Widget build(BuildContext context) {
+    final cta = switch (step) {
+      0 => S.t('courier.picked_up'),
+      1 => S.t('courier.en_route'),
+      _ => S.t('courier.delivered_btn'),
+    };
+    return KoraCard(
+      elevated: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  S.t('courier.active_order',
+                      {'number': offer.orderNumber},),
+                  style: AppTypography.titleSmall,
+                ),
+              ),
+              IconButton(
+                onPressed: onChat,
+                icon: const Icon(AppIcons.chatOut,
+                    color: KoraColors.primary,),
+                tooltip: S.t('order.chat'),
+              ),
+              IconButton(
+                onPressed: onOpenOrder,
+                icon: const Icon(AppIcons.chevronR,
+                    color: KoraColors.primary,),
+                tooltip: S.t('orders.details'),
+              ),
+            ],
+          ),
+          _leg(AppIcons.store, offer.storeName, offer.pickupAddress),
+          const SizedBox(height: AppSpacing.xs),
+          _leg(AppIcons.location, S.t('courier.customer'),
+              offer.dropoffAddress,),
+          const SizedBox(height: AppSpacing.sm),
+          SizedBox(
+            height: 140,
+            child: KoraMap(
+              center: step >= 1 ? offer.dropoff : offer.pickup,
+              markers: [
+                KoraMarker(
+                    point: offer.pickup,
+                    kind: KoraMarkerKind.store,
+                    label: offer.storeName,),
+                KoraMarker(
+                    point: offer.dropoff,
+                    kind: KoraMarkerKind.deliveryPoint,),
+              ],
+              route: [offer.pickup, offer.dropoff],
+              interactive: false,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          SizedBox(
+            width: double.infinity,
+            child: KoraButton(label: cta, onPressed: onAdvance),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _leg(IconData icon, String title, String subtitle) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: KoraColors.primary),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: AppTypography.label),
+              Text(subtitle,
+                  style: AppTypography.caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

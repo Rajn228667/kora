@@ -485,10 +485,11 @@ class _FavoriteStoresTab extends ConsumerWidget {
           padding: const EdgeInsets.all(AppSpacing.lg),
           itemCount: favs.length,
           separatorBuilder: (_, __) =>
-              const SizedBox(height: AppSpacing.sm),
-          itemBuilder: (_, i) => KoraStoreCard(
+              const SizedBox(height: AppSpacing.lg),
+          itemBuilder: (_, i) => KoraStoreHeroCard(
             name: favs[i].name,
-            imageUrl: favs[i].logoUrl,
+            imageUrl: favs[i].bannerUrl ?? favs[i].logoUrl,
+            blurHash: favs[i].blurHash,
             category: favs[i].description,
             rating: favs[i].rating,
             etaMinutes: favs[i].etaMinutes,
@@ -597,10 +598,17 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
 // Sessions.
 // ---------------------------------------------------------------------------
 
-class SessionsScreen extends ConsumerWidget {
+class SessionsScreen extends ConsumerStatefulWidget {
   const SessionsScreen({super.key});
 
-  Future<List<SessionInfo>> _load(WidgetRef ref) async {
+  @override
+  ConsumerState<SessionsScreen> createState() => _SessionsScreenState();
+}
+
+class _SessionsScreenState extends ConsumerState<SessionsScreen> {
+  late Future<List<SessionInfo>> _future = _load();
+
+  Future<List<SessionInfo>> _load() async {
     final res = await ref
         .read(apiClientProvider)
         .get('/users/me/sessions') as Map<String, dynamic>;
@@ -609,18 +617,30 @@ class SessionsScreen extends ConsumerWidget {
         .toList();
   }
 
+  Future<void> _logoutOthers() async {
+    await ref.read(apiClientProvider).post('/auth/logout-all');
+    if (!mounted) return;
+    setState(() => _future = _load());
+    KoraSnackbar.show(context, S.t('sessions.logged_out'));
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
         title: Text(S.t('sessions.title')),
       ),
       body: FutureBuilder<List<SessionInfo>>(
-        future: _load(ref),
+        future: _future,
         builder: (context, snap) {
           if (!snap.hasData) return const KoraLoadingState();
-          return ListView.separated(
+          final others =
+              snap.data!.where((s) => !s.current).toList();
+          return Column(
+            children: [
+              Expanded(
+                child: ListView.separated(
             padding: const EdgeInsets.all(AppSpacing.lg),
             itemCount: snap.data!.length,
             separatorBuilder: (_, __) =>
@@ -652,6 +672,20 @@ class SessionsScreen extends ConsumerWidget {
                 ),
               );
             },
+                ),
+              ),
+              if (others.isNotEmpty)
+                SafeArea(
+                  child: Padding(
+                    padding: AppSpacing.cardPadding,
+                    child: KoraOutlinedButton(
+                      label: S.t('sessions.logout_others'),
+                      icon: AppIcons.logout,
+                      onPressed: _logoutOthers,
+                    ),
+                  ),
+                ),
+            ],
           );
         },
       ),

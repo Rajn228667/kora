@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../core/l10n/app_strings.dart';
+import '../../../core/media/kora_image.dart' as kora_media;
 import '../../../core/models/models.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_metrics.dart';
@@ -156,29 +159,44 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               _AttachTile(
-                icon: AppIcons.camera,
+                icon: AppIcons.gallery,
                 label: S.t('chat.photo'),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context);
-                  KoraSnackbar.show(context, S.t('chat.photo_unavailable'));
-                },
-              ),
-              _AttachTile(
-                icon: AppIcons.mic,
-                label: S.t('chat.voice'),
-                onTap: () {
-                  Navigator.pop(context);
-                  KoraSnackbar.show(context, S.t('chat.voice_unavailable'));
+                  final file = await ImagePicker()
+                      .pickImage(source: ImageSource.gallery);
+                  if (file != null && mounted) {
+                    await ref
+                        .read(chatRoomProvider(widget.orderId).notifier)
+                        .sendImage('file://${file.path}');
+                    _scrollDown();
+                  }
                 },
               ),
               _AttachTile(
                 icon: AppIcons.locationOut,
                 label: S.t('chat.location'),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context);
-                  ref
+                  double lat = 42.3417;
+                  double lng = 69.5901;
+                  try {
+                    var perm = await Geolocator.checkPermission();
+                    if (perm == LocationPermission.denied) {
+                      perm = await Geolocator.requestPermission();
+                    }
+                    if (perm != LocationPermission.denied &&
+                        perm != LocationPermission.deniedForever) {
+                      final pos = await Geolocator.getCurrentPosition();
+                      lat = pos.latitude;
+                      lng = pos.longitude;
+                    }
+                  } catch (_) {/* fall back to city center */}
+                  if (!mounted) return;
+                  await ref
                       .read(chatRoomProvider(widget.orderId).notifier)
-                      .sendLocation(42.3417, 69.5901);
+                      .sendLocation(lat, lng);
+                  _scrollDown();
                 },
               ),
             ],
@@ -275,7 +293,17 @@ class _Bubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (message.type == ChatMessageType.location)
+            if (message.type == ChatMessageType.image)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                child: kora_media.KoraImage(
+                  url: message.mediaUrl,
+                  width: 220,
+                  height: 160,
+                  borderRadius: AppRadius.md,
+                ),
+              )
+            else if (message.type == ChatMessageType.location)
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

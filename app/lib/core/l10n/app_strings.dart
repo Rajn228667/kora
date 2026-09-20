@@ -223,6 +223,9 @@ abstract final class S {
     'pay.cancelled': 'Оплата отменена',
     'pay.refunded': 'Возвращён',
     'pay.partially_refunded': 'Частично возвращён',
+    'pay.kaspi': 'Kaspi',
+    'pay.wallet': 'Бонусы KORA',
+    'pay.cash': 'Наличными курьеру',
 
     // chat
     'chat.title': 'Чат',
@@ -315,6 +318,8 @@ abstract final class S {
     'sessions.current': 'Текущая сессия',
     'sessions.now': 'Сейчас',
     'sessions.logged_in': 'Вход выполнен',
+    'sessions.logout_others': 'Завершить другие сессии',
+    'sessions.logged_out': 'Другие сессии завершены',
 
     // settings / appearance
     'settings.title': 'Настройки',
@@ -336,6 +341,7 @@ abstract final class S {
     'promo.hint': 'Введите промокод',
     'promo.apply': 'Применить',
     'promo.applied': 'Промокод применён',
+    'promo.applied_code': 'Промокод {code} применён',
     'promo.discount': 'Скидка {amount}',
     'promo.min_order': 'Минимальный заказ {amount}',
 
@@ -369,6 +375,7 @@ abstract final class S {
     'notif.status_changed': 'Статус заказа: {status}',
     'notif.courier_assigned': 'Курьер {name} назначен',
     'notif.delivered': 'Заказ доставлен. Приятного аппетита!',
+    'notif.mark_read': 'Прочитать все',
 
     // nav
     'nav.home': 'Главная',
@@ -423,6 +430,12 @@ abstract final class S {
     'courier.order': 'Заказ {number}',
     'courier.load_error': 'Не удалось загрузить',
     'courier.km': '{km} км',
+    'courier.active_order': 'Активный заказ {number}',
+    'courier.picked_up': 'Заказ забран',
+    'courier.en_route': 'В пути к клиенту',
+    'courier.delivered_btn': 'Доставлено',
+    'courier.done': 'Заказ доставлен — отличная работа!',
+    'orders.details': 'Детали заказа',
 
     // admin
     'admin.title': 'Админ-панель',
@@ -516,6 +529,9 @@ abstract final class S {
     'referral.share': 'Поделиться',
     'referral.invited': 'Приглашено',
     'referral.bonus': 'Бонус за друга',
+    'referral.copy': 'Скопировать код',
+    'referral.share_text':
+        'Заказывай в KORA — маркет с доставкой. Мой промокод: {code}',
 
     // manager tools: schedule, image editor, card generator, promo builder
     'common.next': 'Далее',
@@ -740,6 +756,9 @@ abstract final class S {
     'pay.cancelled': 'Төлем болдырылмады',
     'pay.refunded': 'Қайтарылды',
     'pay.partially_refunded': 'Ішінара қайтарылды',
+    'pay.kaspi': 'Kaspi',
+    'pay.wallet': 'KORA бонустары',
+    'pay.cash': 'Курьерге қолма-қол',
 
     'chat.title': 'Чат',
     'chat.first': 'Алғашқы хабарламаны жазыңыз',
@@ -825,6 +844,8 @@ abstract final class S {
     'sessions.current': 'Ағымдағы сессия',
     'sessions.now': 'Қазір',
     'sessions.logged_in': 'Кіру орындалды',
+    'sessions.logout_others': 'Басқа сессияларды аяқтау',
+    'sessions.logged_out': 'Басқа сессиялар аяқталды',
 
     'settings.title': 'Баптаулар',
     'settings.appearance': 'Безендіру',
@@ -844,6 +865,7 @@ abstract final class S {
     'promo.hint': 'Промокодты енгізіңіз',
     'promo.apply': 'Қолдану',
     'promo.applied': 'Промокод қолданылды',
+    'promo.applied_code': '{code} промокоды қолданылды',
     'promo.discount': 'Жеңілдік {amount}',
     'promo.min_order': 'Ең аз тапсырыс {amount}',
 
@@ -875,6 +897,7 @@ abstract final class S {
     'notif.status_changed': 'Тапсырыс мәртебесі: {status}',
     'notif.courier_assigned': '{name} курьері тағайындалды',
     'notif.delivered': 'Тапсырыс жеткізілді. Ас болсын!',
+    'notif.mark_read': 'Барлығын оқу',
 
     'nav.home': 'Басты',
     'nav.search': 'Іздеу',
@@ -926,6 +949,12 @@ abstract final class S {
     'courier.order': 'Тапсырыс {number}',
     'courier.load_error': 'Жүктеу мүмкін болмады',
     'courier.km': '{km} км',
+    'courier.active_order': 'Белсенді тапсырыс {number}',
+    'courier.picked_up': 'Тапсырыс алынды',
+    'courier.en_route': 'Клиентке жолдамын',
+    'courier.delivered_btn': 'Жеткізілді',
+    'courier.done': 'Тапсырыс жеткізілді — тамаша жұмыс!',
+    'orders.details': 'Тапсырыс мәліметтері',
 
     'admin.title': 'Әкімші панелі',
     'admin.users': 'Пайдаланушылар',
@@ -1017,6 +1046,9 @@ abstract final class S {
     'referral.share': 'Бөлісу',
     'referral.invited': 'Шақырылды',
     'referral.bonus': 'Дос үшін бонус',
+    'referral.copy': 'Кодты көшіру',
+    'referral.share_text':
+        'KORA-дан тапсырыс бер — жеткізуі бар маркет. Менің промокодым: {code}',
 
     // manager tools: schedule, image editor, card generator, promo builder
     'common.next': 'Әрі қарай',
@@ -1242,6 +1274,9 @@ abstract final class S {
     'pay.cancelled': 'Payment cancelled',
     'pay.refunded': 'Refunded',
     'pay.partially_refunded': 'Partially refunded',
+    'pay.kaspi': 'Kaspi',
+    'pay.wallet': 'KORA bonuses',
+    'pay.cash': 'Cash to courier',
 
     'chat.title': 'Chat',
     'chat.first': 'Write the first message',
@@ -1326,6 +1361,8 @@ abstract final class S {
     'sessions.current': 'Current session',
     'sessions.now': 'Now',
     'sessions.logged_in': 'Signed in',
+    'sessions.logout_others': 'Sign out other sessions',
+    'sessions.logged_out': 'Other sessions ended',
 
     'settings.title': 'Settings',
     'settings.appearance': 'Appearance',
@@ -1345,6 +1382,7 @@ abstract final class S {
     'promo.hint': 'Enter promo code',
     'promo.apply': 'Apply',
     'promo.applied': 'Promo applied',
+    'promo.applied_code': 'Promo code {code} applied',
     'promo.discount': 'Discount {amount}',
     'promo.min_order': 'Minimum order {amount}',
 
@@ -1376,6 +1414,7 @@ abstract final class S {
     'notif.status_changed': 'Order status: {status}',
     'notif.courier_assigned': 'Courier {name} assigned',
     'notif.delivered': 'Order delivered. Enjoy!',
+    'notif.mark_read': 'Mark all read',
 
     'nav.home': 'Home',
     'nav.search': 'Search',
@@ -1427,6 +1466,12 @@ abstract final class S {
     'courier.order': 'Order {number}',
     'courier.load_error': 'Failed to load',
     'courier.km': '{km} km',
+    'courier.active_order': 'Active order {number}',
+    'courier.picked_up': 'Picked up',
+    'courier.en_route': 'On the way to customer',
+    'courier.delivered_btn': 'Delivered',
+    'courier.done': 'Order delivered — great job!',
+    'orders.details': 'Order details',
 
     'admin.title': 'Admin panel',
     'admin.users': 'Users',
@@ -1518,6 +1563,9 @@ abstract final class S {
     'referral.share': 'Share',
     'referral.invited': 'Invited',
     'referral.bonus': 'Bonus per friend',
+    'referral.copy': 'Copy code',
+    'referral.share_text':
+        'Order on KORA — a marketplace with delivery. My promo code: {code}',
 
     // manager tools: schedule, image editor, card generator, promo builder
     'common.next': 'Next',

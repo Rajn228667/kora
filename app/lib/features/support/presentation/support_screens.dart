@@ -29,12 +29,7 @@ class SupportRepository {
         .toList();
   }
 
-  Future<List<SupportTicket>> tickets() async {
-    final res = await _ref.read(apiClientProvider).get('/support/tickets')
-        as Map<String, dynamic>;
-    return (res['items'] as List).map((t) {
-      final j = t as Map<String, dynamic>;
-      return SupportTicket(
+  SupportTicket _ticket(Map<String, dynamic> j) => SupportTicket(
         id: j['id'] as String,
         subject: j['subject'] as String? ?? S.t('support.ticket_fallback'),
         status: TicketStatus.values.firstWhere(
@@ -44,9 +39,28 @@ class SupportRepository {
         createdAt:
             DateTime.tryParse(j['createdAt'] as String? ?? '') ??
                 DateTime.now(),
+        messages: ((j['messages'] as List?) ?? const [])
+            .map((m) => ChatMessage.fromJson(
+                (m as Map).cast<String, dynamic>(),),)
+            .toList(),
       );
-    }).toList();
+
+  Future<List<SupportTicket>> tickets() async {
+    final res = await _ref.read(apiClientProvider).get('/support/tickets')
+        as Map<String, dynamic>;
+    return (res['items'] as List)
+        .map((t) => _ticket((t as Map).cast<String, dynamic>()))
+        .toList();
   }
+
+  Future<SupportTicket> ticket(String id) async => _ticket(
+      await _ref.read(apiClientProvider).get('/support/tickets/$id')
+          as Map<String, dynamic>,);
+
+  Future<SupportTicket> sendMessage(String id, String text) async => _ticket(
+      await _ref.read(apiClientProvider).post(
+          '/support/tickets/$id/messages',
+          body: {'text': text},) as Map<String, dynamic>,);
 
   Future<SupportTicket> createTicket(String subject, String message) async {
     final res = await _ref
@@ -54,12 +68,7 @@ class SupportRepository {
         .post('/support/tickets',
             body: {'subject': subject, 'message': message},)
         as Map<String, dynamic>;
-    return SupportTicket(
-      id: res['id'] as String,
-      subject: res['subject'] as String? ?? subject,
-      status: TicketStatus.open,
-      createdAt: DateTime.now(),
-    );
+    return _ticket(res);
   }
 }
 
@@ -161,6 +170,12 @@ class SupportScreen extends ConsumerWidget {
                             padding: const EdgeInsets.only(
                                 bottom: AppSpacing.sm,),
                             child: KoraCard(
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) =>
+                                      TicketDetailScreen(ticketId: t.id),
+                                ),
+                              ),
                               child: Row(
                                 children: [
                                   const Icon(AppIcons.chat,
@@ -249,6 +264,157 @@ class SupportScreen extends ConsumerWidget {
                   KoraSnackbar.show(context, S.t('support.created'));
                 }
               },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Ticket thread — message history + reply box. Agent replies arrive via
+// realtime 'support.message' events.
+// ---------------------------------------------------------------------------
+
+final ticketProvider =
+    FutureProvider.family<SupportTicket, String>((ref, id) async {
+  // Live refresh when an operator answers.
+  final sub = ref.watch(realtimeProvider).events.listen((e) {
+    if (e.type == 'support.message' && e.data['ticketId'] == id) {
+      ref.invalidateSelf();
+    }
+  });
+  ref.onDispose(sub.cancel);
+  return ref.watch(supportRepositoryProvider).ticket(id);
+});
+
+class TicketDetailScreen extends ConsumerStatefulWidget {
+  const TicketDetailScreen({super.key, required this.ticketId});
+
+  final String ticketId;
+
+  @override
+  ConsumerState<TicketDetailScreen> createState() =>
+      _TicketDetailScreenState();
+}
+
+class _TicketDetailScreenState extends ConsumerState<TicketDetailScreen> {
+  final _input = TextEditingController();
+  bool _sending = false;
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final text = _input.text.trim();
+    if (text.isEmpty || _sending) return;
+    setState(() => _sending = true);
+    try {
+      await ref
+          .read(supportRepositoryProvider)
+          .sendMessage(widget.ticketId, text);
+      _input.clear();
+      ref.invalidate(ticketProvider(widget.ticketId));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ticket = ref.watch(ticketProvider(widget.ticketId));
+    return Scaffold(
+      appBar: AppBar(
+        leading: const BackButton(),
+        title: ticket.maybeWhen(
+          data: (t) => Text(t.subject),
+          orElse: () => Text(S.t('support.tickets')),
+        ),
+      ),
+      body: ticket.when(
+        loading: () => const KoraLoadingState(),
+        error: (_, __) => KoraErrorState(
+          message: S.t('common.error'),
+          onRetry: () => ref.invalidate(ticketProvider(widget.ticketId)),
+        ),
+        data: (t) => Column(
+          children: [
+            Expanded(
+              child: t.messages.isEmpty
+                  ? KoraEmptyState(
+                      icon: AppIcons.chatOut,
+                      title: S.t('chat.first'),
+                      message: S.t('chat.first_sub'),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      itemCount: t.messages.length,
+                      itemBuilder: (_, i) {
+                        final m = t.messages[i];
+                        final mine = m.senderId != 'support';
+                        return Align(
+                          alignment: mine
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.only(
+                                bottom: AppSpacing.sm,),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.sm,
+                            ),
+                            constraints: BoxConstraints(
+                              maxWidth:
+                                  MediaQuery.of(context).size.width * 0.75,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient:
+                                  mine ? KoraColors.primaryGradient : null,
+                              color: mine ? null : KoraColors.surfaceAlt,
+                              borderRadius:
+                                  BorderRadius.circular(AppRadius.lg),
+                            ),
+                            child: Text(
+                              m.text ?? '',
+                              style: AppTypography.body.copyWith(
+                                color: mine
+                                    ? KoraColors.white
+                                    : KoraColors.textPrimaryC,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.lg,
+                    AppSpacing.sm, AppSpacing.lg, AppSpacing.sm,),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _input,
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => _send(),
+                        decoration:
+                            InputDecoration(hintText: S.t('chat.hint')),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                    IconButton(
+                      onPressed: _sending ? null : _send,
+                      icon: const Icon(AppIcons.send,
+                          color: KoraColors.primary,),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),

@@ -31,6 +31,10 @@ class AdminRepository {
   Future<List<User>> users() async =>
       (await _list('/admin/users')).map(User.fromJson).toList();
 
+  Future<void> setUserBlocked(String id, {required bool blocked}) => _ref
+      .read(apiClientProvider)
+      .post('/admin/users/$id/block', body: {'blocked': blocked});
+
   Future<List<Order>> orders() async =>
       (await _list('/admin/orders')).map(Order.fromJson).toList();
 
@@ -129,6 +133,10 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       _DataTab<User>(
         loader: repo.users,
         itemBuilder: (u) => KoraCard(
+          onTap: () async {
+            await repo.setUserBlocked(u.id, blocked: !u.blocked);
+            _bump();
+          },
           child: Row(
             children: [
               KoraAvatar(

@@ -304,6 +304,183 @@ class _AddButton extends StatelessWidget {
   }
 }
 
+/// Hero venue card — full-width banner image with floating ETA badge,
+/// name, rating and delivery fee below. Wolt-style storefront tile.
+class KoraStoreHeroCard extends StatelessWidget {
+  const KoraStoreHeroCard({
+    super.key,
+    required this.name,
+    this.imageUrl,
+    this.blurHash,
+    this.category,
+    this.rating,
+    this.etaMinutes,
+    this.deliveryFeeTiyn,
+    this.isOpen = true,
+    this.onTap,
+    this.badge,
+  });
+
+  final String name;
+  final String? imageUrl;
+  final String? blurHash;
+  final String? category;
+  final double? rating;
+  final int? etaMinutes;
+  final int? deliveryFeeTiyn;
+  final bool isOpen;
+  final VoidCallback? onTap;
+  final String? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    return KoraPressable(
+      onTap: isOpen ? onTap : null,
+      semanticLabel: '${S.t('a11y.store')} $name',
+      child: Opacity(
+        opacity: isOpen ? 1 : 0.55,
+        child: Container(
+          decoration: BoxDecoration(
+            color: KoraColors.surface,
+            borderRadius: AppRadius.card,
+            border: Border.all(color: KoraColors.softBorderC),
+            boxShadow: AppShadows.card,
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  KoraImage(
+                    url: imageUrl,
+                    blurHash: blurHash,
+                    width: double.infinity,
+                    height: 140,
+                  ),
+                  if (etaMinutes != null)
+                    Positioned(
+                      left: AppSpacing.md,
+                      bottom: AppSpacing.md,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.xxs,
+                        ),
+                        decoration: BoxDecoration(
+                          color: KoraColors.white,
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.sm),
+                          boxShadow: AppShadows.card,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(AppIcons.clock,
+                                size: 13, color: KoraColors.primary,),
+                            const SizedBox(width: 3),
+                            Text(
+                              '$etaMinutes ${S.t('common.min')}',
+                              style: AppTypography.caption.copyWith(
+                                color: KoraColors.textPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (badge != null)
+                    Positioned(
+                      top: AppSpacing.md,
+                      right: AppSpacing.md,
+                      child: KoraBadge(label: badge!, filled: true),
+                    ),
+                  if (!isOpen)
+                    Positioned.fill(
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.xs,
+                          ),
+                          decoration: BoxDecoration(
+                            color: KoraColors.white,
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.sm),
+                          ),
+                          child: Text(
+                            S.t('store.closed'),
+                            style: AppTypography.label,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.md,
+                    AppSpacing.sm, AppSpacing.md, AppSpacing.md,),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name,
+                            style: AppTypography.titleSmall,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (rating != null) ...[
+                          const Icon(AppIcons.star,
+                              size: 15, color: KoraColors.primary,),
+                          const SizedBox(width: AppSpacing.xxs),
+                          Text(
+                            rating!.toStringAsFixed(1),
+                            style: AppTypography.label,
+                          ),
+                        ],
+                      ],
+                    ),
+                    if (category != null) ...[
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        category!,
+                        style: AppTypography.caption,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                    if (deliveryFeeTiyn != null) ...[
+                      const SizedBox(height: AppSpacing.xxs),
+                      Row(
+                        children: [
+                          const Icon(AppIcons.bike,
+                              size: 14, color: KoraColors.primary,),
+                          const SizedBox(width: AppSpacing.xxs),
+                          Text(
+                            deliveryFeeTiyn == 0
+                                ? S.t('common.free')
+                                : KoraPrice.format(deliveryFeeTiyn!),
+                            style: AppTypography.caption,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _Dot extends StatelessWidget {
   const _Dot();
 
