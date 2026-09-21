@@ -17,7 +17,7 @@ import '../../../core/widgets/buttons.dart';
 import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../../core/widgets/fields.dart';
-import 'manager_screens.dart';
+import '../data/manager_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Store schedule editor (§41) — per-weekday open/close, closed toggle.

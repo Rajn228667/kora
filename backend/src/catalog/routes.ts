@@ -24,7 +24,18 @@ const productInput = z.object({
   article: z.string().trim().min(3).max(64).optional(),
   internalBarcode: z.string().regex(/^\d{8,14}$/).optional(),
   gtin: z.string().optional().nullable(),
-  imageUrl: z.string().url().max(2048).nullish(),
+  imageUrl: z
+    .string()
+    .max(4096)
+    .refine(
+      (v) =>
+        v.startsWith('https://') ||
+        v.startsWith('http://') ||
+        v.startsWith('/v1/media/') ||
+        v.startsWith('data:image/'),
+      'imageUrl must be an http(s) URL, /v1/media path or data URI',
+    )
+    .nullish(),
   characteristics: z.record(z.string(), z.string()).default({}),
 });
 const updateInput = productInput.partial().omit({ storeId: true });

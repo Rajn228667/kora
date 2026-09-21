@@ -90,7 +90,6 @@ class CourierScreen extends ConsumerStatefulWidget {
 
 class _CourierScreenState extends ConsumerState<CourierScreen> {
   bool _online = false;
-  bool _delivering = false;
   CourierOffer? _active;
   int _activeStep = 0; // 0 → to store, 1 → picked up, 2 → en route
   StreamSubscription<Position>? _gps;
@@ -107,36 +106,56 @@ class _CourierScreenState extends ConsumerState<CourierScreen> {
     setState(() => _online = v);
     if (v) {
       await ref.read(courierOffersProvider.notifier).refresh();
-      _startGps();
+      unawaited(_startGps());
     } else {
       await _gps?.cancel();
       setState(() {
-        _delivering = false;
         _active = null;
         _activeStep = 0;
       });
     }
   }
 
-  void _startGps() {
-    _gps?.cancel();
+  Future<void> _startGps() async {
+    unawaited(_gps?.cancel());
     try {
+      // Explicit permission prompt — couriers must grant location so the
+      // live tracker and free-courier map actually work.
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          KoraSnackbar.show(
+            context,
+            S.t('courier.gps_denied'),
+            isError: true,
+          );
+        }
+        return;
+      }
       _gps = Geolocator.getPositionStream(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
           distanceFilter: 15,
         ),
       ).listen((pos) {
-        if (_delivering && _throttle.ready) {
+        // Post while online — free couriers show up on the manager map
+        // and tracking stays warm for the next assignment.
+        if (_throttle.ready) {
           _throttle.mark();
-          ref
-              .read(courierRepoProvider)
-              .postLocation(
-                  GeoPoint(lat: pos.latitude, lng: pos.longitude),)
-              .catchError((_) {});
+          unawaited(
+            ref
+                .read(courierRepoProvider)
+                .postLocation(
+                    GeoPoint(lat: pos.latitude, lng: pos.longitude),)
+                .catchError((_) {}),
+          );
         }
       });
-    } catch (_) {/* permission denied — manual mode */}
+    } catch (_) {/* location service unavailable — manual mode */}
   }
 
   @override
@@ -246,7 +265,6 @@ class _CourierScreenState extends ConsumerState<CourierScreen> {
                                         .read(courierRepoProvider)
                                         .respond(o.id, true);
                                     setState(() {
-                                      _delivering = true;
                                       _active = o;
                                       _activeStep = 0;
                                     });
@@ -288,7 +306,6 @@ class _CourierScreenState extends ConsumerState<CourierScreen> {
         setState(() {
           _active = null;
           _activeStep = 0;
-          _delivering = false;
         });
         KoraSnackbar.show(context, S.t('courier.done'));
         await ref.read(courierOffersProvider.notifier).refresh();

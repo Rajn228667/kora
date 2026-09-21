@@ -11,6 +11,7 @@ import { registerChatRoutes } from './chat/routes.js';
 import { registerCommerceRoutes } from './commerce/routes.js';
 import { registerCourierRoutes } from './courier/routes.js';
 import { registerManagerRoutes } from './manager/routes.js';
+import { registerMediaRoutes } from './media/routes.js';
 import { registerSupportRoutes } from './support/routes.js';
 import type { Config } from './config.js';
 import { NotificationService } from './notifications/notification-service.js';
@@ -84,6 +85,7 @@ export async function buildApp(config: Config): Promise<FastifyInstance> {
   await registerCourierRoutes(app, config);
   await registerManagerRoutes(app, config);
   await registerAdminRoutes(app, config);
+  await registerMediaRoutes(app, config);
   await registerRealtimeGateway(app, config);
   return app;
 }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -230,26 +231,7 @@ class OrderDetailScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           if (showMap) ...[
-            SizedBox(
-              height: 240,
-              child: KoraMap(
-                center: order.courierLocation ??
-                    order.delivery.point,
-                markers: [
-                  KoraMarker(
-                    point: order.delivery.point,
-                    kind: KoraMarkerKind.deliveryPoint,
-                    label: S.t('map.you'),
-                  ),
-                  if (order.courierLocation != null)
-                    KoraMarker(
-                      point: order.courierLocation!,
-                      kind: KoraMarkerKind.courier,
-                      label: order.courierName ?? S.t('call.courier'),
-                    ),
-                ],
-              ),
-            ),
+            _DeliveryMapCard(order: order),
             const SizedBox(height: AppSpacing.lg),
           ],
           Row(
@@ -486,6 +468,142 @@ class _Timeline extends StatelessWidget {
           ],
         );
       }).toList(),
+    );
+  }
+}
+
+/// Live delivery card: courier > customer route with traffic-colored
+/// segments (green/amber/red) plus distance and ETA � Wolt/Yandex style.
+class _DeliveryMapCard extends StatelessWidget {
+  const _DeliveryMapCard({required this.order});
+
+  final Order order;
+
+  /// Straight courier>customer path, gently curved � until a routing
+  /// provider (2GIS/Yandex) supplies real road geometry.
+  List<GeoPoint> _route(GeoPoint from, GeoPoint to) {
+    const n = 10;
+    final dx = to.lng - from.lng;
+    final dy = to.lat - from.lat;
+    // Perpendicular offset for a slight arc � reads like a road bend.
+    final px = -dy * 0.12, py = dx * 0.12;
+    return List.generate(n + 1, (i) {
+      final t = i / n;
+      final bend = math.sin(t * math.pi) * (1 - t * 0.5);
+      return GeoPoint(
+        lat: from.lat + dy * t + py * bend,
+        lng: from.lng + dx * t + px * bend,
+      );
+    });
+  }
+
+  /// Deterministic congestion per segment � replaced by provider data
+  /// once a traffic-capable routing API key is configured.
+  List<double> _traffic(int segments) {
+    final seed = order.id.codeUnits.fold(7, (a, c) => (a * 31 + c) & 0x7fffffff);
+    final rnd = math.Random(seed);
+    return List.generate(
+      segments,
+      (i) => (rnd.nextDouble() * 0.75 + i * 0.02).clamp(0.0, 1.0),
+    );
+  }
+
+  double _km(GeoPoint a, GeoPoint b) {
+    const r = 6371.0;
+    final dLat = (b.lat - a.lat) * math.pi / 180;
+    final dLng = (b.lng - a.lng) * math.pi / 180;
+    final h = math.pow(math.sin(dLat / 2), 2) +
+        math.cos(a.lat * math.pi / 180) *
+            math.cos(b.lat * math.pi / 180) *
+            math.pow(math.sin(dLng / 2), 2);
+    return r * 2 * math.asin(math.sqrt(h));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final courier = order.courierLocation;
+    final dest = order.delivery.point;
+    final route = courier == null ? const <GeoPoint>[] : _route(courier, dest);
+    final km = courier == null ? 0.0 : _km(courier, dest);
+    // ~25 km/h city average + traffic drag from mean congestion.
+    final traffic = route.isEmpty ? const <double>[] : _traffic(route.length - 1);
+    final drag = traffic.isEmpty
+        ? 1.0
+        : 1 + traffic.reduce((a, b) => a + b) / traffic.length;
+    final etaMin = (km / 25 * 60 * drag).round();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 240,
+          child: KoraMap(
+            center: courier ?? dest,
+            markers: [
+              KoraMarker(
+                point: dest,
+                kind: KoraMarkerKind.deliveryPoint,
+                label: S.t('map.you'),
+              ),
+              if (courier != null)
+                KoraMarker(
+                  point: courier,
+                  kind: KoraMarkerKind.courier,
+                  label: order.courierName ?? S.t('call.courier'),
+                ),
+            ],
+            route: route,
+            trafficLevels: traffic.isEmpty ? null : traffic,
+            followMarker: KoraMarkerKind.courier,
+          ),
+        ),
+        if (courier != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              KoraStatusChip(
+                label: '~$etaMin ${S.t('common.min')}',
+                tone: KoraStatusTone.active,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                S.t('order.km_left', {'km': km.toStringAsFixed(1)}),
+                style: AppTypography.caption,
+              ),
+              const Spacer(),
+              // Traffic legend � compact dots matching segment colors.
+              const _TrafficLegend(),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _TrafficLegend extends StatelessWidget {
+  const _TrafficLegend();
+
+  @override
+  Widget build(BuildContext context) {
+    const colors = [
+      Color(0xFF22C55E),
+      Color(0xFFF59E0B),
+      Color(0xFFEF4444),
+    ];
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(AppIcons.traffic, size: 14, color: KoraColors.placeholder),
+        const SizedBox(width: 4),
+        for (final c in colors)
+          Container(
+            width: 8,
+            height: 8,
+            margin: const EdgeInsets.only(left: 3),
+            decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+          ),
+      ],
     );
   }
 }

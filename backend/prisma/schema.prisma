@@ -725,6 +725,8 @@ model MediaAsset {
   kind        String   @default("product") // product | store | chat | avatar
   storageKey  String   @unique
   publicUrl   String?
+  contentType String?
+  data        Bytes?   // inline image bytes — served by GET /v1/media/:id
   width       Int?
   height      Int?
   sizeBytes   Int?

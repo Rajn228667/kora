@@ -186,6 +186,7 @@ abstract final class S {
     'map.point_auto': 'Точка на карте ({lat}, {lng})',
     'map.point_generic': 'Точка на карте',
     'map.you': 'Вы',
+    'order.km_left': 'осталось {km} км',
 
     // orders
     'orders.title': 'Мои заказы',
@@ -424,6 +425,10 @@ abstract final class S {
     'manager.bonus_amount': 'Сумма, ₸',
     'manager.bonus_sent': 'Бонусы начислены',
     'manager.user_not_found': 'Клиент не найден',
+    'manager.description': 'Описание',
+    'manager.publish': 'Опубликовать товар',
+    'manager.process_photo': 'Обработать',
+    'manager.edit_photo': 'Изменить вручную',
     'product.bonus': 'бонус',
 
     // courier
@@ -448,6 +453,7 @@ abstract final class S {
     'courier.en_route': 'В пути к клиенту',
     'courier.delivered_btn': 'Доставлено',
     'courier.done': 'Заказ доставлен — отличная работа!',
+    'courier.gps_denied': 'Разрешите геолокацию, чтобы видеть заказы на карте',
     'orders.details': 'Детали заказа',
 
     // admin
@@ -739,6 +745,7 @@ abstract final class S {
     'map.point_auto': 'Картадағы нүкте ({lat}, {lng})',
     'map.point_generic': 'Картадағы нүкте',
     'map.you': 'Сіз',
+    'order.km_left': '{km} км қалды',
 
     'orders.title': 'Менің тапсырыстарым',
     'orders.empty': 'Әзірге тапсырыс жоқ',
@@ -961,6 +968,10 @@ abstract final class S {
     'manager.bonus_amount': 'Сомасы, ₸',
     'manager.bonus_sent': 'Бонустар берілді',
     'manager.user_not_found': 'Клиент табылмады',
+    'manager.description': 'Сипаттама',
+    'manager.publish': 'Тауарды жариялау',
+    'manager.process_photo': 'Өңдеу',
+    'manager.edit_photo': 'Қолмен өзгерту',
     'product.bonus': 'бонус',
 
     'courier.title': 'Курьер режимі',
@@ -984,6 +995,7 @@ abstract final class S {
     'courier.en_route': 'Клиентке жолдамын',
     'courier.delivered_btn': 'Жеткізілді',
     'courier.done': 'Тапсырыс жеткізілді — тамаша жұмыс!',
+    'courier.gps_denied': 'Картадағы тапсырыстар үшін геолокацияға рұқсат беріңіз',
     'orders.details': 'Тапсырыс мәліметтері',
 
     'admin.title': 'Әкімші панелі',
@@ -1273,6 +1285,7 @@ abstract final class S {
     'map.point_auto': 'Map point ({lat}, {lng})',
     'map.point_generic': 'Map point',
     'map.you': 'You',
+    'order.km_left': '{km} km left',
 
     'orders.title': 'My orders',
     'orders.empty': 'No orders yet',
@@ -1494,6 +1507,10 @@ abstract final class S {
     'manager.bonus_amount': 'Amount, ₸',
     'manager.bonus_sent': 'Bonus credited',
     'manager.user_not_found': 'Customer not found',
+    'manager.description': 'Description',
+    'manager.publish': 'Publish product',
+    'manager.process_photo': 'Process',
+    'manager.edit_photo': 'Edit manually',
     'product.bonus': 'bonus',
 
     'courier.title': 'Courier mode',
@@ -1517,6 +1534,7 @@ abstract final class S {
     'courier.en_route': 'On the way to customer',
     'courier.delivered_btn': 'Delivered',
     'courier.done': 'Order delivered — great job!',
+    'courier.gps_denied': 'Allow location access to see orders on the map',
     'orders.details': 'Order details',
 
     'admin.title': 'Admin panel',

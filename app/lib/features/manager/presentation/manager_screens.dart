@@ -15,105 +15,8 @@ import '../../../core/widgets/feedback.dart';
 import '../../../core/widgets/fields.dart';
 import '../../../core/widgets/misc.dart';
 import '../../orders/data/orders_repository.dart';
-
-class ManagerRepository {
-  ManagerRepository(this._ref);
-
-  final Ref _ref;
-
-  Future<ManagerDashboard> dashboard() async {
-    final res = await _ref
-        .read(apiClientProvider)
-        .get('/manager/dashboard') as Map<String, dynamic>;
-    return ManagerDashboard(
-      newOrders: (res['newOrders'] as num?)?.toInt() ?? 0,
-      preparing: (res['preparing'] as num?)?.toInt() ?? 0,
-      ready: (res['ready'] as num?)?.toInt() ?? 0,
-      deliveredToday: (res['deliveredToday'] as num?)?.toInt() ?? 0,
-      cancelledToday: (res['cancelledToday'] as num?)?.toInt() ?? 0,
-      salesTodayTiyn: (res['salesTodayTiyn'] as num?)?.toInt() ?? 0,
-    );
-  }
-
-  Future<void> act(String orderId, String action,
-      {String? courierId,}) async {
-    await _ref.read(apiClientProvider).post(
-        '/manager/orders/$orderId/$action',
-        body: {if (courierId != null) 'courierId': courierId},);
-  }
-
-  Future<List<CourierInfo>> couriers() async {
-    final res = await _ref
-        .read(apiClientProvider)
-        .get('/manager/couriers') as Map<String, dynamic>;
-    return (res['items'] as List)
-        .map((c) => CourierInfo(
-              id: (c as Map)['id'] as String,
-              name: c['name'] as String? ?? S.t('call.courier'),
-              status: CourierStatus.values.firstWhere(
-                (s) => s.name == c['status'],
-                orElse: () => CourierStatus.offline,
-              ),
-              activeOrders: (c['activeOrders'] as num?)?.toInt() ?? 0,
-            ),)
-        .toList();
-  }
-
-  Future<List<Product>> products() async {
-    final res = await _ref
-        .read(apiClientProvider)
-        .get('/manager/products') as Map<String, dynamic>;
-    return (res['items'] as List)
-        .map((p) => Product.fromJson(p as Map<String, dynamic>))
-        .toList();
-  }
-
-  Future<void> saveProduct(Product p) async {
-    final body = {
-      'name': p.name,
-      'description': p.description,
-      'priceTiyn': p.priceTiyn,
-      'oldPriceTiyn': p.oldPriceTiyn,
-      'bonusPercent': p.bonusPercent,
-      'stock': p.stock,
-      'available': p.available,
-      'storeId': p.storeId,
-    };
-    if (p.id.isEmpty) {
-      await _ref.read(apiClientProvider).post('/manager/products', body: body);
-    } else {
-      await _ref
-          .read(apiClientProvider)
-          .patch('/manager/products/${p.id}', body: body);
-    }
-  }
-
-  Future<Map<String, dynamic>> cityMap() async =>
-      await _ref.read(apiClientProvider).get('/manager/map')
-          as Map<String, dynamic>;
-}
-
-final managerRepoProvider = Provider((ref) => ManagerRepository(ref));
-
-final managerDashboardProvider = FutureProvider(
-    (ref) => ref.watch(managerRepoProvider).dashboard(),);
-
-final managerCouriersProvider = FutureProvider(
-    (ref) => ref.watch(managerRepoProvider).couriers(),);
-
-final managerProductsProvider = AsyncNotifierProvider<
-    ManagerProductsController, List<Product>>(ManagerProductsController.new);
-
-class ManagerProductsController extends AsyncNotifier<List<Product>> {
-  @override
-  Future<List<Product>> build() =>
-      ref.watch(managerRepoProvider).products();
-
-  Future<void> save(Product p) async {
-    await ref.read(managerRepoProvider).saveProduct(p);
-    ref.invalidateSelf();
-  }
-}
+import '../data/manager_repository.dart';
+import 'manager_publish.dart';
 
 /// Manager cabinet — tabs: Dashboard / Orders / Products / Map.
 class ManagerScreen extends ConsumerStatefulWidget {
@@ -562,7 +465,7 @@ class _ProductsTab extends ConsumerWidget {
           itemBuilder: (_, i) {
             final p = list[i];
             return KoraCard(
-              onTap: () => _editProduct(context, ref, p),
+              onTap: () => PublishProductSheet.show(context, product: p),
               child: Row(
                 children: [
                   Expanded(
@@ -594,98 +497,12 @@ class _ProductsTab extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: KoraColors.primary,
-        onPressed: () => _editProduct(context, ref, null),
+        onPressed: () => PublishProductSheet.show(context),
         child: const Icon(AppIcons.add, color: KoraColors.white),
       ),
     );
   }
 
-  void _editProduct(BuildContext context, WidgetRef ref, Product? p) {
-    final name = TextEditingController(text: p?.name ?? '');
-    final price = TextEditingController(
-        text: p == null ? '' : '${p.priceTiyn ~/ 100}',);
-    final stock =
-        TextEditingController(text: '${p?.stock ?? 0}');
-    final bonus =
-        TextEditingController(text: '${p?.bonusPercent ?? 0}');
-    var available = p?.available ?? true;
-    KoraBottomSheet.show<void>(
-      context,
-      child: StatefulBuilder(
-        builder: (context, setSheet) => Padding(
-          padding: AppSpacing.cardPadding,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                  p == null
-                      ? S.t('manager.new_product')
-                      : S.t('manager.edit_product'),
-                  style: AppTypography.title,),
-              const SizedBox(height: AppSpacing.md),
-              KoraTextField(
-                  controller: name, hint: S.t('manager.product_name'),),
-              const SizedBox(height: AppSpacing.sm),
-              Row(
-                children: [
-                  Expanded(
-                    child: KoraTextField(
-                      controller: price,
-                      hint: S.t('manager.price'),
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: KoraTextField(
-                      controller: stock,
-                      hint: S.t('manager.stock'),
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: KoraTextField(
-                      controller: bonus,
-                      hint: S.t('manager.bonus_percent'),
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ],
-              ),
-              SwitchListTile(
-                value: available,
-                onChanged: (v) => setSheet(() => available = v),
-                title:
-                    Text(S.t('manager.in_sale'), style: AppTypography.label),
-                contentPadding: EdgeInsets.zero,
-              ),
-              KoraButton(
-                label: S.t('common.save'),
-                onPressed: () async {
-                  await ref
-                      .read(managerProductsProvider.notifier)
-                      .save(Product(
-                        id: p?.id ?? '',
-                        storeId: p?.storeId ?? 'kora-market',
-                        name: name.text.trim(),
-                        priceTiyn:
-                            (int.tryParse(price.text) ?? 0) * 100,
-                        bonusPercent:
-                            (int.tryParse(bonus.text) ?? 0).clamp(0, 50),
-                        stock: int.tryParse(stock.text) ?? 0,
-                        available: available,
-                      ),);
-                  if (context.mounted) Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _MapTab extends ConsumerWidget {

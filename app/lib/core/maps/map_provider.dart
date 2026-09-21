@@ -55,6 +55,7 @@ class KoraMap extends StatefulWidget {
     required this.center,
     this.markers = const [],
     this.route = const [],
+    this.trafficLevels,
     this.onTapPick,
     this.picked,
     this.followMarker,
@@ -64,6 +65,11 @@ class KoraMap extends StatefulWidget {
   final GeoPoint center;
   final List<KoraMarker> markers;
   final List<GeoPoint> route;
+
+  /// Optional congestion level per route segment (0.0 free → 1.0 jam).
+  /// When provided the route renders as colored segments —
+  /// green/amber/red, Yandex-traffic style.
+  final List<double>? trafficLevels;
   final ValueChanged<GeoPoint>? onTapPick;
   final GeoPoint? picked;
   final KoraMarkerKind? followMarker;
@@ -136,13 +142,15 @@ class _KoraMapState extends State<KoraMap> {
           ),
           if (widget.route.length >= 2)
             PolylineLayer(
-              polylines: [
-                Polyline(
-                  points: widget.route.map(_latLng).toList(),
-                  color: KoraColors.primary,
-                  strokeWidth: 5,
-                ),
-              ],
+              polylines: _trafficLevels == null
+                  ? [
+                      Polyline(
+                        points: widget.route.map(_latLng).toList(),
+                        color: KoraColors.primary,
+                        strokeWidth: 5,
+                      ),
+                    ]
+                  : _trafficPolylines(),
             ),
           MarkerLayer(
             markers: mapMarkers.map(_marker).toList(),
@@ -172,6 +180,47 @@ class _KoraMapState extends State<KoraMap> {
         ],
       ),
     );
+  }
+
+  List<double>? get _trafficLevels {
+    final levels = widget.trafficLevels;
+    if (levels == null ||
+        levels.length != widget.route.length - 1) {
+      return null;
+    }
+    return levels;
+  }
+
+  /// Splits the route into per-segment polylines tinted by congestion.
+  /// Border underlay keeps colors legible on map tiles.
+  List<Polyline> _trafficPolylines() {
+    final levels = _trafficLevels!;
+    final out = <Polyline>[
+      Polyline(
+        points: widget.route.map(_latLng).toList(),
+        color: KoraColors.white,
+        strokeWidth: 9,
+      ),
+    ];
+    for (var i = 0; i < levels.length; i++) {
+      final level = levels[i];
+      final color = level < 0.34
+          ? const Color(0xFF22C55E)
+          : level < 0.67
+              ? const Color(0xFFF59E0B)
+              : const Color(0xFFEF4444);
+      out.add(
+        Polyline(
+          points: [
+            _latLng(widget.route[i]),
+            _latLng(widget.route[i + 1]),
+          ],
+          color: color,
+          strokeWidth: 5,
+        ),
+      );
+    }
+    return out;
   }
 
   Marker _marker(KoraMarker marker) {

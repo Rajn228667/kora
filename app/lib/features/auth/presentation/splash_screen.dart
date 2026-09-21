@@ -8,8 +8,9 @@ import '../../../core/theme/app_typography.dart';
 import '../../../core/theme/kora_colors.dart';
 import 'auth_providers.dart';
 
-/// KORA launch sequence (~1.2 s): logo fades+scales in, "KORA" rises,
-/// "MARKET" tracks in, then routes to auth/home.
+/// KORA launch sequence (~1.4 s): the "K" mark eases in with a soft
+/// scale, then "KORA" letters appear one by one with tracking expansion —
+/// Apple-style restraint, no bounce overshoot.
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -27,7 +28,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     super.initState();
     _c = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1100),
+      duration: const Duration(milliseconds: 1400),
     )..forward();
     _c.addStatusListener((s) {
       if (s == AnimationStatus.completed) _tryNavigate();
@@ -55,7 +56,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    // If reduce-motion is requested, show the static mark and route fast.
     final reduced = AppAnimations.reduceMotion(context);
     if (reduced && _c.duration != Duration.zero) {
       _c.duration = const Duration(milliseconds: 200);
@@ -63,15 +63,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     final logo = CurvedAnimation(
       parent: _c,
-      curve: const Interval(0.0, 0.45, curve: Curves.easeOutBack),
+      curve: const Interval(0.0, 0.4, curve: Curves.easeOutCubic),
     );
-    final title = CurvedAnimation(
+    final tagline = CurvedAnimation(
       parent: _c,
-      curve: const Interval(0.35, 0.75, curve: AppAnimations.ease),
-    );
-    final market = CurvedAnimation(
-      parent: _c,
-      curve: const Interval(0.6, 1.0, curve: AppAnimations.ease),
+      curve: const Interval(0.72, 1.0, curve: AppAnimations.ease),
     );
 
     return Scaffold(
@@ -84,47 +80,76 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               FadeTransition(
                 opacity: logo,
                 child: ScaleTransition(
-                  scale: logo,
+                  scale: Tween<double>(begin: 0.86, end: 1).animate(logo),
                   child: Image.asset(
                     'assets/brand/kora_logo_k.png',
-                    width: 120,
-                    height: 120,
+                    width: 104,
+                    height: 104,
                   ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              FadeTransition(
-                opacity: title,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.25),
-                    end: Offset.zero,
-                  ).animate(title),
-                  child: Text(
-                    'KORA',
-                    style: AppTypography.displayLarge.copyWith(
-                      color: KoraTheme.dark
-                          ? KoraColors.darkTextPrimary
-                          : KoraColors.brandNavy,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.5,
+              const SizedBox(height: AppSpacing.xl),
+              // Letter-by-letter reveal — each glyph fades in while the
+              // whole word gently expands its tracking (Apple keynote style).
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var i = 0; i < 4; i++)
+                    _Letter(
+                      'KORA'[i],
+                      CurvedAnimation(
+                        parent: _c,
+                        curve: Interval(
+                          0.3 + i * 0.09,
+                          0.3 + i * 0.09 + 0.3,
+                          curve: AppAnimations.ease,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
+                ],
               ),
-              const SizedBox(height: AppSpacing.xs),
+              const SizedBox(height: AppSpacing.sm),
               FadeTransition(
-                opacity: market,
+                opacity: tagline,
                 child: Text(
                   S.t('splash.market'),
                   style: AppTypography.overline.copyWith(
                     color: KoraColors.primary,
-                    fontSize: 13,
-                    letterSpacing: 8,
+                    fontSize: 12,
+                    letterSpacing: 7,
                   ),
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Single brand letter — fades in while rising slightly.
+class _Letter extends StatelessWidget {
+  const _Letter(this.char, this.animation);
+
+  final String char;
+  final Animation<double> animation;
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: animation,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.35),
+          end: Offset.zero,
+        ).animate(animation),
+        child: Text(
+          char,
+          style: AppTypography.displayLarge.copyWith(
+            color: KoraColors.brandNavy,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 4,
           ),
         ),
       ),

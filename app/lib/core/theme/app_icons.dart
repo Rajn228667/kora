@@ -87,4 +87,7 @@ abstract final class AppIcons {
   static const IconData contrast = Icons.contrast_rounded;
   static const IconData palette = Icons.palette_rounded;
   static const IconData tune = Icons.tune_rounded;
+  static const IconData auto = Icons.auto_fix_high_rounded;
+  static const IconData traffic = Icons.traffic_rounded;
+  static const IconData gps = Icons.gps_fixed_rounded;
 }
