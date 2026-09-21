@@ -20,6 +20,7 @@ export const productSelect = {
   description: true,
   priceTiyn: true,
   oldPriceTiyn: true,
+  bonusPercent: true,
   unit: true,
   sku: true,
   article: true,

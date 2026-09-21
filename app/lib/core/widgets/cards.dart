@@ -169,6 +169,7 @@ class KoraProductCard extends StatelessWidget {
     required this.name,
     required this.priceTiyn,
     this.oldPriceTiyn,
+    this.bonusPercent = 0,
     this.imageUrl,
     this.blurHash,
     this.unit,
@@ -182,6 +183,7 @@ class KoraProductCard extends StatelessWidget {
   final String name;
   final int priceTiyn;
   final int? oldPriceTiyn;
+  final int bonusPercent;
   final String? imageUrl;
   final String? blurHash;
   final String? unit;
@@ -236,6 +238,29 @@ class KoraProductCard extends StatelessWidget {
                     child: _FavoriteDot(
                       active: isFavorite,
                       onTap: onFavorite!,
+                    ),
+                  ),
+                if (bonusPercent > 0)
+                  Positioned(
+                    top: AppSpacing.xs,
+                    left: AppSpacing.xs,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xs,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: KoraColors.primary,
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      child: Text(
+                        '+$bonusPercent%',
+                        style: AppTypography.caption.copyWith(
+                          color: KoraColors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 10,
+                        ),
+                      ),
                     ),
                   ),
               ],

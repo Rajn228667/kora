@@ -173,25 +173,61 @@ export async function registerCourierRoutes(
         error: { code: 'ORDER_NOT_FOUND', message: 'Order not found' },
       });
     }
-    await prisma.$transaction([
-      prisma.order.update({ where: { id: orderId }, data: { status } }),
-      prisma.orderStatusEntry.create({
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({ where: { id: orderId }, data: { status } });
+      await tx.orderStatusEntry.create({
         data: {
           orderId,
           status,
           actorId: auth.sub,
           actorRole: 'courier',
         },
-      }),
-      ...(status === 'delivered'
-        ? [
-            prisma.courierProfile.updateMany({
-              where: { userId: auth.sub },
-              data: { status: 'online', activeOrder: null },
-            }),
-          ]
-        : []),
-    ]);
+      });
+      if (status === 'delivered') {
+        await tx.courierProfile.updateMany({
+          where: { userId: auth.sub },
+          data: { status: 'online', activeOrder: null },
+        });
+        // Cashback: credit per-product bonusPercent of the delivered order.
+        const items = await tx.orderItem.findMany({
+          where: { orderId },
+          include: { product: { select: { bonusPercent: true } } },
+        });
+        const bonus = items.reduce(
+          (sum, i) =>
+            sum +
+            Math.floor(
+              (i.priceTiyn * i.quantity * (i.product?.bonusPercent ?? 0)) / 100,
+            ),
+          0,
+        );
+        if (bonus > 0) {
+          await tx.walletAccount.upsert({
+            where: { userId: order.userId },
+            create: { userId: order.userId, balanceTiyn: bonus },
+            update: { balanceTiyn: { increment: bonus } },
+          });
+          await tx.walletTransaction.create({
+            data: {
+              accountId: order.userId,
+              kind: 'cashback',
+              amountTiyn: bonus,
+              title: `Cashback ${order.number}`,
+              orderId,
+            },
+          });
+        }
+        void app.notifications
+          .send({
+            userId: order.userId,
+            kind: 'delivered',
+            title: `Order ${order.number}`,
+            body: 'Delivered',
+            orderId,
+          })
+          .catch(() => {});
+      }
+    });
     void emitOrderEvent(app.realtime, orderId, 'order.status_changed', {
       status,
     }).catch(() => {});

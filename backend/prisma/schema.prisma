@@ -325,6 +325,7 @@ model Product {
   description     String       @default("")
   priceTiyn       Int
   oldPriceTiyn    Int?
+  bonusPercent    Int         @default(0) // cashback credited on delivery
   unit            String?
   sku             String       @unique
   article         String       @unique

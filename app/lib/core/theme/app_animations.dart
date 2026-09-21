@@ -51,6 +51,63 @@ class KoraPageTransition {
   }
 }
 
+/// Staggered fade+rise entrance for list/grid children. Wrap each item:
+/// `KoraEntrance(index: i, child: ...)`. Honors reduce-motion.
+class KoraEntrance extends StatefulWidget {
+  const KoraEntrance({
+    super.key,
+    required this.index,
+    required this.child,
+    this.maxStagger = 8,
+  });
+
+  final int index;
+  final Widget child;
+  final int maxStagger;
+
+  @override
+  State<KoraEntrance> createState() => _KoraEntranceState();
+}
+
+class _KoraEntranceState extends State<KoraEntrance>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: AppAnimations.emphasis,
+  );
+  late final Animation<double> _fade =
+      CurvedAnimation(parent: _controller, curve: AppAnimations.ease);
+  late final Animation<Offset> _slide = Tween<Offset>(
+    begin: const Offset(0, 0.04),
+    end: Offset.zero,
+  ).animate(CurvedAnimation(parent: _controller, curve: AppAnimations.ease));
+
+  @override
+  void initState() {
+    super.initState();
+    if (AppAnimations.reduceMotion(context)) {
+      _controller.value = 1;
+      return;
+    }
+    final delay = (widget.index.clamp(0, widget.maxStagger) * 40);
+    Future.delayed(Duration(milliseconds: delay), () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => FadeTransition(
+        opacity: _fade,
+        child: SlideTransition(position: _slide, child: widget.child),
+      );
+}
+
 /// Scale-on-press wrapper for buttons and tappable cards.
 class KoraPressable extends StatefulWidget {
   const KoraPressable({

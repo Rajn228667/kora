@@ -286,6 +286,7 @@ class Product {
     this.blurHash,
     required this.priceTiyn,
     this.oldPriceTiyn,
+    this.bonusPercent = 0,
     this.sku = '',
     this.slug = '',
     this.article = '',
@@ -311,6 +312,7 @@ class Product {
   final String? blurHash;
   final int priceTiyn;
   final int? oldPriceTiyn;
+  final int bonusPercent;
   final String sku;
   final String slug;
   final String article;
@@ -340,6 +342,7 @@ class Product {
         blurHash: j['blurHash'] as String?,
         priceTiyn: (j['priceTiyn'] as num).toInt(),
         oldPriceTiyn: (j['oldPriceTiyn'] as num?)?.toInt(),
+        bonusPercent: (j['bonusPercent'] as num?)?.toInt() ?? 0,
         sku: j['sku'] as String? ?? '',
         slug: j['slug'] as String? ?? '',
         article: j['article'] as String? ?? '',

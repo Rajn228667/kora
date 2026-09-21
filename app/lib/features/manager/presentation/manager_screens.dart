@@ -74,6 +74,7 @@ class ManagerRepository {
       'description': p.description,
       'priceTiyn': p.priceTiyn,
       'oldPriceTiyn': p.oldPriceTiyn,
+      'bonusPercent': p.bonusPercent,
       'stock': p.stock,
       'available': p.available,
       'storeId': p.storeId,
@@ -189,6 +190,8 @@ class _DashboardTab extends ConsumerWidget {
               () => context.push('/manager/promo-builder'),),
           _ToolAction(S.t('manager.action_schedule'), AppIcons.clock,
               () => context.push('/manager/schedule'),),
+          _ToolAction(S.t('manager.grant_bonus'), AppIcons.gift,
+              () => _GrantBonusSheet.show(context),),
           _Stat(S.t('manager.new'), '${d.newOrders}',
               AppIcons.notification,),
           _Stat(S.t('manager.preparing'), '${d.preparing}',
@@ -404,6 +407,113 @@ class _ManagerOrderTile extends ConsumerWidget {
   }
 }
 
+/// Bottom sheet: search customer by phone, credit wallet bonus.
+class _GrantBonusSheet extends ConsumerStatefulWidget {
+  const _GrantBonusSheet();
+
+  static Future<void> show(BuildContext context) =>
+      KoraBottomSheet.show<void>(context, child: const _GrantBonusSheet());
+
+  @override
+  ConsumerState<_GrantBonusSheet> createState() => _GrantBonusSheetState();
+}
+
+class _GrantBonusSheetState extends ConsumerState<_GrantBonusSheet> {
+  final _phone = TextEditingController();
+  final _amount = TextEditingController();
+  List<Map<String, dynamic>> _results = [];
+  Map<String, dynamic>? _selected;
+  bool _busy = false;
+
+  Future<void> _search(String q) async {
+    _selected = null;
+    if (q.trim().length < 3) {
+      setState(() => _results = []);
+      return;
+    }
+    final res = await ref.read(apiClientProvider).get(
+      '/manager/users',
+      query: {'q': q.trim()},
+    ) as Map<String, dynamic>;
+    if (mounted) {
+      setState(() =>
+          _results = (res['items'] as List).cast<Map<String, dynamic>>(),);
+    }
+  }
+
+  Future<void> _grant() async {
+    final user = _selected;
+    final amount = (int.tryParse(_amount.text) ?? 0) * 100;
+    if (user == null || amount <= 0) return;
+    setState(() => _busy = true);
+    try {
+      await ref.read(apiClientProvider).post(
+        '/manager/users/${user['id']}/bonus',
+        body: {
+          'amountTiyn': amount,
+          'title': S.t('manager.grant_bonus'),
+        },
+      );
+      if (mounted) {
+        Navigator.pop(context);
+        KoraSnackbar.show(context, S.t('manager.bonus_sent'));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: AppSpacing.cardPadding,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(S.t('manager.grant_bonus'), style: AppTypography.title),
+          const SizedBox(height: AppSpacing.md),
+          KoraTextField(
+            controller: _phone,
+            hint: S.t('manager.user_phone'),
+            keyboardType: TextInputType.phone,
+            onChanged: _search,
+          ),
+          if (_results.isNotEmpty)
+            ..._results.map(
+              (u) => ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  '${u['name'] == '' ? u['phone'] : u['name']} · ${u['phone']}',
+                  style: AppTypography.label,
+                ),
+                onTap: () => setState(() {
+                  _selected = u;
+                  _results = [];
+                  _phone.text = '${u['phone']}';
+                }),
+              ),
+            ),
+          const SizedBox(height: AppSpacing.sm),
+          KoraTextField(
+            controller: _amount,
+            hint: S.t('manager.bonus_amount'),
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          KoraButton(
+            label: _selected == null
+                ? S.t('manager.user_not_found')
+                : S.t('manager.grant_bonus'),
+            onPressed: _selected != null && !_busy ? _grant : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Action extends StatelessWidget {
   const _Action(this.label, this.onTap,
       {this.danger = false, this.ghost = false,});
@@ -496,6 +606,8 @@ class _ProductsTab extends ConsumerWidget {
         text: p == null ? '' : '${p.priceTiyn ~/ 100}',);
     final stock =
         TextEditingController(text: '${p?.stock ?? 0}');
+    final bonus =
+        TextEditingController(text: '${p?.bonusPercent ?? 0}');
     var available = p?.available ?? true;
     KoraBottomSheet.show<void>(
       context,
@@ -532,6 +644,14 @@ class _ProductsTab extends ConsumerWidget {
                       keyboardType: TextInputType.number,
                     ),
                   ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: KoraTextField(
+                      controller: bonus,
+                      hint: S.t('manager.bonus_percent'),
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
                 ],
               ),
               SwitchListTile(
@@ -552,6 +672,8 @@ class _ProductsTab extends ConsumerWidget {
                         name: name.text.trim(),
                         priceTiyn:
                             (int.tryParse(price.text) ?? 0) * 100,
+                        bonusPercent:
+                            (int.tryParse(bonus.text) ?? 0).clamp(0, 50),
                         stock: int.tryParse(stock.text) ?? 0,
                         available: available,
                       ),);

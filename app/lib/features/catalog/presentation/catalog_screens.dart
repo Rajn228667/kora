@@ -167,6 +167,7 @@ class StoreScreen extends ConsumerWidget {
                               name: list[i].name,
                               priceTiyn: list[i].priceTiyn,
                               oldPriceTiyn: list[i].oldPriceTiyn,
+                              bonusPercent: list[i].bonusPercent,
                               imageUrl: list[i].imageUrl,
                               blurHash: list[i].blurHash,
                               available: list[i].available,
@@ -319,6 +320,12 @@ class _ProductScreenState extends ConsumerState<ProductScreen> {
                             label: '−${p.discountPercent}%',
                             filled: true,
                           ),
+                        if (p.bonusPercent > 0) ...[
+                          const SizedBox(width: AppSpacing.xs),
+                          KoraBadge(
+                            label: '+${p.bonusPercent}% ${S.t('product.bonus')}',
+                          ),
+                        ],
                       ],
                     ),
                     if (p.description.isNotEmpty) ...[

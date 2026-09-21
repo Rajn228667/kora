@@ -443,6 +443,7 @@ class _FavoriteProductsTab extends ConsumerWidget {
                 name: p.name,
                 priceTiyn: p.priceTiyn,
                 oldPriceTiyn: p.oldPriceTiyn,
+                bonusPercent: p.bonusPercent,
                 imageUrl: p.imageUrl,
                 blurHash: p.blurHash,
                 available: p.available,

@@ -220,6 +220,82 @@ export async function registerManagerRoutes(
     return { ok: true };
   });
 
+  // ── Bonus grants — manager credits a customer's wallet ──
+  app.get('/v1/manager/users', async (request, reply) => {
+    const auth = await authenticate(request, reply, config, staff);
+    if (!auth) return;
+    const { q } = z
+      .object({ q: z.string().trim().min(2).max(100) })
+      .parse(request.query);
+    const users = await prisma.user.findMany({
+      where: {
+        deletedAt: null,
+        OR: [
+          { phone: { contains: q } },
+          { name: { contains: q, mode: 'insensitive' } },
+          { email: { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true, phone: true, name: true, email: true },
+      take: 20,
+    });
+    return { items: users };
+  });
+
+  app.post('/v1/manager/users/:id/bonus', async (request, reply) => {
+    const auth = await authenticate(request, reply, config, staff);
+    if (!auth) return;
+    const { id: userId } = request.params as { id: string };
+    const { amountTiyn, title } = z
+      .object({
+        amountTiyn: z.number().int().min(1).max(100_000_00),
+        title: z.string().trim().max(160).default('Bonus'),
+      })
+      .parse(request.body);
+    const target = await prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+    });
+    if (!target) {
+      return reply.code(404).send({
+        error: { code: 'USER_NOT_FOUND', message: 'User not found' },
+      });
+    }
+    await prisma.$transaction([
+      prisma.walletAccount.upsert({
+        where: { userId },
+        create: { userId, balanceTiyn: amountTiyn },
+        update: { balanceTiyn: { increment: amountTiyn } },
+      }),
+      prisma.walletTransaction.create({
+        data: {
+          accountId: userId,
+          kind: 'promo_credit',
+          amountTiyn,
+          title,
+        },
+      }),
+      prisma.auditLog.create({
+        data: {
+          actorId: auth.sub,
+          actorRole: auth.role,
+          action: 'bonus_granted',
+          resource: userId,
+          details: { amountTiyn, title },
+          ip: request.ip,
+        },
+      }),
+    ]);
+    void app.notifications
+      .send({
+        userId,
+        kind: 'promo',
+        title,
+        body: `+${amountTiyn}`,
+      })
+      .catch(() => {});
+    return { ok: true };
+  });
+
   // ── Order workflow actions ──
   app.post('/v1/manager/orders/:id/:action', async (request, reply) => {
     const auth = await authenticate(request, reply, config, staff);

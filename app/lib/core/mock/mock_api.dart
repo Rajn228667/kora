@@ -698,8 +698,16 @@ class MockApiClient implements ApiClient {
       _orders[i] = _orders[i].copyWith(paymentStatus: PaymentStatus.paid);
     }
     final placed = _orders.firstWhere((o) => o.id == order.id);
-    // Wallet cashback — 2% of the paid total lands as bonus points.
-    final cashback = order.totalTiyn ~/ 50;
+    // Wallet cashback — per-product bonusPercent, fallback 2% of total.
+    var cashback = 0;
+    for (final item in order.items) {
+      final p =
+          _products.where((x) => x.id == item.productId).firstOrNull;
+      if (p != null && p.bonusPercent > 0) {
+        cashback += item.priceTiyn * item.quantity * p.bonusPercent ~/ 100;
+      }
+    }
+    if (cashback == 0) cashback = order.totalTiyn ~/ 50;
     if (cashback > 0) {
       _walletBalanceTiyn += cashback;
       _walletTxns.insert(
@@ -1388,6 +1396,7 @@ class MockApiClient implements ApiClient {
             description: b['description'] as String? ?? '',
             priceTiyn: (b['priceTiyn'] as num?)?.toInt() ?? 0,
             oldPriceTiyn: (b['oldPriceTiyn'] as num?)?.toInt(),
+            bonusPercent: (b['bonusPercent'] as num?)?.toInt() ?? 0,
             stock: (b['stock'] as num?)?.toInt() ?? 0,
             imageUrl: b['imageUrl'] as String?,
             categoryId: b['categoryId'] as String?,
@@ -1413,6 +1422,8 @@ class MockApiClient implements ApiClient {
             priceTiyn: (b['priceTiyn'] as num?)?.toInt() ?? old.priceTiyn,
             oldPriceTiyn:
                 (b['oldPriceTiyn'] as num?)?.toInt() ?? old.oldPriceTiyn,
+            bonusPercent:
+                (b['bonusPercent'] as num?)?.toInt() ?? old.bonusPercent,
             stock: (b['stock'] as num?)?.toInt() ?? old.stock,
             available: b['available'] as bool? ?? old.available,
           );
@@ -1444,6 +1455,43 @@ class MockApiClient implements ApiClient {
             'activeOrders': 2,
           },
         ]);
+      case 'users':
+        // GET /manager/users?q= — customer lookup; POST …/bonus — grant.
+        if (seg.length == 4 && _s(seg, 3) == 'bonus' && method == 'POST') {
+          _audit.add(
+            AuditEntry(
+              id: _id('aud'),
+              actor: _user?.name ?? 'manager',
+              role: UserRole.manager,
+              action: 'bonus_granted',
+              resource: _s(seg, 2),
+              at: DateTime.now(),
+            ),
+          );
+          return {'ok': true};
+        }
+        final query = (q['q'] as String? ?? '').toLowerCase();
+        final all = [
+          ..._users,
+          const User(
+            id: 'u-demo',
+            phone: '+77001234567',
+            name: 'Айгерим',
+            role: UserRole.customer,
+          ),
+        ];
+        return _wrap(
+          all
+              .where(
+                (u) =>
+                    query.isEmpty ||
+                    u.phone.contains(query) ||
+                    u.name.toLowerCase().contains(query),
+              )
+              .map(
+                (u) => {'id': u.id, 'phone': u.phone, 'name': u.name},
+              ),
+        );
       case 'schedule':
         // GET/PUT /manager/schedule — working hours for own store.
         final storeId = b['storeId'] as String? ?? 'kora-market';
@@ -1589,6 +1637,7 @@ class MockApiClient implements ApiClient {
             categoryId: b['categoryId'] as String?,
             priceTiyn: (b['priceTiyn'] as num?)?.toInt() ?? 0,
             oldPriceTiyn: (b['oldPriceTiyn'] as num?)?.toInt(),
+            bonusPercent: (b['bonusPercent'] as num?)?.toInt() ?? 0,
             stock: (b['stock'] as num?)?.toInt() ?? 0,
             available: b['available'] as bool? ?? true,
           );
@@ -1621,6 +1670,9 @@ class MockApiClient implements ApiClient {
             oldPriceTiyn: b.containsKey('oldPriceTiyn')
                 ? (b['oldPriceTiyn'] as num?)?.toInt()
                 : old.oldPriceTiyn,
+            bonusPercent: b.containsKey('bonusPercent')
+                ? (b['bonusPercent'] as num?)?.toInt() ?? 0
+                : old.bonusPercent,
             stock: (b['stock'] as num?)?.toInt() ?? old.stock,
             available: b['available'] as bool? ?? old.available,
             sku: old.sku,
@@ -1960,6 +2012,7 @@ class MockApiClient implements ApiClient {
         'blurHash': p.blurHash,
         'priceTiyn': p.priceTiyn,
         'oldPriceTiyn': p.oldPriceTiyn,
+        'bonusPercent': p.bonusPercent,
         'sku': p.sku,
         'slug': p.slug,
         'article': p.article,
