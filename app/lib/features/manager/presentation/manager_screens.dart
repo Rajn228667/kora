@@ -548,7 +548,7 @@ class _ProductsTab extends ConsumerWidget {
                       .read(managerProductsProvider.notifier)
                       .save(Product(
                         id: p?.id ?? '',
-                        storeId: p?.storeId ?? 'st-handam',
+                        storeId: p?.storeId ?? 'kora-market',
                         name: name.text.trim(),
                         priceTiyn:
                             (int.tryParse(price.text) ?? 0) * 100,

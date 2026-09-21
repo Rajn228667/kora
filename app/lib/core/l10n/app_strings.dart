@@ -1,4 +1,4 @@
-﻿/// KORA localization — RU / KK / EN.
+/// KORA localization — RU / KK / EN.
 ///
 /// Every user-facing string goes through [S.t]. The active language
 /// lives in [S.lang], kept in sync by `languageProvider`
@@ -59,8 +59,10 @@ abstract final class S {
     'splash.market': 'MARKET',
     'splash.tagline': 'Доставка по Казахстану',
     'welcome.title': 'KORA',
-    'welcome.subtitle':
-        'Рестораны, магазины и аптеки —\nс доставкой к вашей двери',
+    'welcome.subtitle': 'Всё из одного магазина —\nс доставкой к вашей двери',
+    'welcome.f_delivery': 'Рестораны, продукты и аптеки — в одном приложении',
+    'welcome.f_cashback': 'Кэшбэк бонусами с каждого заказа',
+    'welcome.f_tracking': 'Отслеживание курьера на карте в реальном времени',
     'welcome.cta': 'Войти по номеру телефона',
 
     // auth
@@ -69,8 +71,7 @@ abstract final class S {
     'phone.hint': '+7 700 000 00 00',
     'phone.semantic': 'Номер телефона',
     'phone.get_code': 'Получить код',
-    'phone.dev_hint':
-        'Dev: номер …002 — менеджер, …003 — курьер, …004 — админ',
+    'phone.dev_hint': 'Dev: номер …002 — менеджер, …003 — курьер, …004 — админ',
     'phone.invalid': 'Введите номер в формате +7 XXX XXX XX XX',
     'otp.title': 'Код из SMS',
     'otp.sent_to': 'Отправлен на {phone}',
@@ -82,7 +83,7 @@ abstract final class S {
     'otp.hint': '● ● ● ● ● ●',
     'otp.semantic': 'Код подтверждения',
     'profile_setup.title': 'Как вас зовут?',
-    'profile_setup.subtitle': 'Имя увидят магазины и курьеры',
+    'profile_setup.subtitle': 'Имя увидят магазин и курьеры',
     'profile_setup.hint': 'Имя',
     'profile_setup.continue': 'Продолжить',
 
@@ -97,11 +98,16 @@ abstract final class S {
     'home.free_delivery': '0 ₸ доставка',
     'home.categories': 'Категории',
     'home.recent': 'Вы смотрели',
-    'home.load_error': 'Не удалось загрузить магазины',
+    'home.deals': 'Скидки и акции',
+    'home.promo_tag': 'Акция',
+    'home.catalog': 'Каталог',
+    'catalog.empty': 'Каталог пока пуст',
+    'catalog.empty_sub': 'Менеджер наполняет ассортимент — загляните позже',
+    'home.load_error': 'Не удалось загрузить каталог',
 
     // search
     'search.title': 'Поиск по KORA',
-    'search.empty': 'Найдите ресторан, магазин или товар',
+    'search.empty': 'Найдите товар в каталоге KORA',
     'search.no_results': 'Ничего не найдено',
     'search.try_other': 'Попробуйте изменить запрос',
     'search.stores': 'Магазины',
@@ -130,13 +136,13 @@ abstract final class S {
     // categories
     'category.title': 'Категория',
     'category.empty': 'Пока пусто',
-    'category.empty_sub': 'В этой категории скоро появятся магазины',
+    'category.empty_sub': 'В этой категории скоро появятся товары',
     'category.load_error': 'Не удалось загрузить',
 
     // cart
     'cart.title': 'Корзина',
     'cart.empty': 'Корзина пуста',
-    'cart.empty_sub': 'Добавьте товары из магазинов',
+    'cart.empty_sub': 'Добавьте товары из каталога',
     'cart.clear': 'Очистить корзину',
     'cart.clear_title': 'Очистить корзину?',
     'cart.clear_msg': 'Все товары будут удалены',
@@ -167,13 +173,11 @@ abstract final class S {
 
     // map picker
     'map.title': 'Точка доставки',
-    'map.info':
-        'Поделитесь точкой доставки, чтобы курьер смог вас найти. '
-            'Коснитесь карты или определите геолокацию.',
+    'map.info': 'Поделитесь точкой доставки, чтобы курьер смог вас найти. '
+        'Коснитесь карты или определите геолокацию.',
     'map.address_hint': 'Улица, дом, квартира',
     'map.my_location': 'Моё местоположение',
-    'map.no_gps':
-        'Нет доступа к геолокации — выберите точку на карте вручную',
+    'map.no_gps': 'Нет доступа к геолокации — выберите точку на карте вручную',
     'map.locate_fail': 'Не удалось определить местоположение',
     'map.point_label': 'Точка доставки',
     'map.point_auto': 'Точка на карте ({lat}, {lng})',
@@ -303,20 +307,18 @@ abstract final class S {
 
     // favorites
     'favorites.title': 'Избранное',
-    'favorites.empty': 'Нет избранных магазинов',
-    'favorites.empty_sub': 'Нажмите на сердечко в карточке магазина',
+    'favorites.empty': 'Нет избранных товаров',
+    'favorites.empty_sub': 'Нажмите на сердечко в карточке товара',
     'favorites.load_error': 'Не удалось загрузить избранное',
 
     // security / sessions
     'security.title': 'Безопасность',
     'security.biometric': 'Вход по биометрии',
-    'security.biometric_sub':
-        'Face ID / отпечаток при открытии приложения',
+    'security.biometric_sub': 'Face ID / отпечаток при открытии приложения',
     'security.biometric_off': 'Биометрия недоступна на этом устройстве',
     'security.biometric_reason':
         'Подтвердите, чтобы включить вход по биометрии',
-    'security.biometric_note':
-        'Биометрические данные не покидают устройство.',
+    'security.biometric_note': 'Биометрические данные не покидают устройство.',
     'sessions.title': 'Активные сессии',
     'sessions.current': 'Текущая сессия',
     'sessions.now': 'Сейчас',
@@ -486,6 +488,7 @@ abstract final class S {
     'admin.product_saved': 'Товар сохранён',
     'admin.delete_product': 'Удалить товар?',
     'admin.deleted': 'Удалено',
+    'admin.category': 'Категория каталога',
     'admin.catalog_empty': 'Каталог пуст',
     'admin.catalog_empty_sub': 'Добавьте первый товар',
     'admin.promos_empty': 'Нет акций',
@@ -505,7 +508,8 @@ abstract final class S {
 
     // location consent + wallet + referral + recently viewed
     'location.title': 'Поделитесь геопозицией',
-    'location.body': 'Это поможет показать доступные магазины рядом с вами и определить точку доставки.',
+    'location.body':
+        'Это поможет показать доступные магазины рядом с вами и определить точку доставки.',
     'location.allow': 'Разрешить доступ',
     'location.later': 'Не сейчас',
     'wallet.title': 'Кошелёк',
@@ -527,7 +531,8 @@ abstract final class S {
     'order.repeat': 'Повторить заказ',
     'order.repeated': 'Товары добавлены в корзину',
     'referral.title': 'Пригласите друзей',
-    'referral.body': 'Поделитесь кодом — друг получит бонус после первого заказа, а вы — после его оплаты.',
+    'referral.body':
+        'Поделитесь кодом — друг получит бонус после первого заказа, а вы — после его оплаты.',
     'referral.your_code': 'Ваш код',
     'referral.share': 'Поделиться',
     'referral.invited': 'Приглашено',
@@ -607,8 +612,11 @@ abstract final class S {
     'splash.market': 'MARKET',
     'splash.tagline': 'Қазақстан бойынша жеткізу',
     'welcome.title': 'KORA',
-    'welcome.subtitle':
-        'Мейрамханалар, дүкендер және дәріханалар —\nесігіңізге жеткізу',
+    'welcome.subtitle': 'Барлығы бір дүкеннен —\nесігіңізге жеткізу',
+    'welcome.f_delivery':
+        'Мейрамханалар, азық-түлік және дәріханалар — бір қосымшада',
+    'welcome.f_cashback': 'Әр тапсырыстан бонус кэшбэк',
+    'welcome.f_tracking': 'Курьерді картада нақты уақытта бақылау',
     'welcome.cta': 'Телефон нөмірімен кіру',
 
     'phone.title': 'Телефон нөміріңіз',
@@ -616,8 +624,7 @@ abstract final class S {
     'phone.hint': '+7 700 000 00 00',
     'phone.semantic': 'Телефон нөмірі',
     'phone.get_code': 'Код алу',
-    'phone.dev_hint':
-        'Dev: …002 — менеджер, …003 — курьер, …004 — админ',
+    'phone.dev_hint': 'Dev: …002 — менеджер, …003 — курьер, …004 — админ',
     'phone.invalid': 'Нөмірді +7 XXX XXX XX XX форматында енгізіңіз',
     'otp.title': 'SMS коды',
     'otp.sent_to': '{phone} нөміріне жіберілді',
@@ -629,7 +636,7 @@ abstract final class S {
     'otp.hint': '● ● ● ● ● ●',
     'otp.semantic': 'Растау коды',
     'profile_setup.title': 'Атыңыз кім?',
-    'profile_setup.subtitle': 'Атыңызды дүкендер мен курьерлер көреді',
+    'profile_setup.subtitle': 'Атыңызды дүкен мен курьерлер көреді',
     'profile_setup.hint': 'Аты',
     'profile_setup.continue': 'Жалғастыру',
 
@@ -643,10 +650,15 @@ abstract final class S {
     'home.free_delivery': '0 ₸ жеткізу',
     'home.categories': 'Санаттар',
     'home.recent': 'Сіз көрдіңіз',
-    'home.load_error': 'Дүкендерді жүктеу мүмкін болмады',
+    'home.deals': 'Жеңілдіктер мен акциялар',
+    'home.promo_tag': 'Акция',
+    'home.catalog': 'Каталог',
+    'catalog.empty': 'Каталог әзірге бос',
+    'catalog.empty_sub': 'Менеджер ассортиментті толтыруда — кейінірек келіңіз',
+    'home.load_error': 'Каталогты жүктеу мүмкін болмады',
 
     'search.title': 'KORA бойынша іздеу',
-    'search.empty': 'Мейрамхана, дүкен немесе тауарды табыңыз',
+    'search.empty': 'KORA каталогынан тауар табыңыз',
     'search.no_results': 'Ештеңе табылмады',
     'search.try_other': 'Сұрауды өзгертіп көріңіз',
     'search.stores': 'Дүкендер',
@@ -672,7 +684,7 @@ abstract final class S {
 
     'category.title': 'Санат',
     'category.empty': 'Әзірге бос',
-    'category.empty_sub': 'Бұл санатта жақында дүкендер пайда болады',
+    'category.empty_sub': 'Бұл санатта жақында тауарлар пайда болады',
     'category.load_error': 'Жүктеу мүмкін болмады',
 
     'cart.title': 'Себет',
@@ -706,13 +718,11 @@ abstract final class S {
     'checkout.need_address': 'Мекенжайды немесе картадағы нүктені көрсетіңіз',
 
     'map.title': 'Жеткізу нүктесі',
-    'map.info':
-        'Курьер сізді таба алуы үшін жеткізу нүктесін бөлісіңіз. '
-            'Картаға түртіңіз немесе геолокацияны анықтаңыз.',
+    'map.info': 'Курьер сізді таба алуы үшін жеткізу нүктесін бөлісіңіз. '
+        'Картаға түртіңіз немесе геолокацияны анықтаңыз.',
     'map.address_hint': 'Көше, үй, пәтер',
     'map.my_location': 'Менің орным',
-    'map.no_gps':
-        'Геолокацияға рұқсат жоқ — нүктені картадан қолмен таңдаңыз',
+    'map.no_gps': 'Геолокацияға рұқсат жоқ — нүктені картадан қолмен таңдаңыз',
     'map.locate_fail': 'Орынды анықтау мүмкін болмады',
     'map.point_label': 'Жеткізу нүктесі',
     'map.point_auto': 'Картадағы нүкте ({lat}, {lng})',
@@ -834,7 +844,7 @@ abstract final class S {
     'addresses.load_error': 'Мекенжайларды жүктеу мүмкін болмады',
 
     'favorites.title': 'Таңдаулылар',
-    'favorites.empty': 'Таңдаулы дүкендер жоқ',
+    'favorites.empty': 'Таңдаулы тауарлар жоқ',
     'favorites.empty_sub': 'Дүкен картасындағы жүректі басыңыз',
     'favorites.load_error': 'Таңдаулыларды жүктеу мүмкін болмады',
 
@@ -842,10 +852,8 @@ abstract final class S {
     'security.biometric': 'Биометриямен кіру',
     'security.biometric_sub': 'Қолданбаны ашқанда Face ID / саусақ ізі',
     'security.biometric_off': 'Бұл құрылғыда биометрия қолжетімсіз',
-    'security.biometric_reason':
-        'Биометриямен кіруді қосу үшін растаңыз',
-    'security.biometric_note':
-        'Биометриялық деректер құрылғыдан шықпайды.',
+    'security.biometric_reason': 'Биометриямен кіруді қосу үшін растаңыз',
+    'security.biometric_note': 'Биометриялық деректер құрылғыдан шықпайды.',
     'sessions.title': 'Белсенді сессиялар',
     'sessions.current': 'Ағымдағы сессия',
     'sessions.now': 'Қазір',
@@ -1006,6 +1014,7 @@ abstract final class S {
     'admin.product_saved': 'Тауар сақталды',
     'admin.delete_product': 'Тауарды жою керек пе?',
     'admin.deleted': 'Жойылды',
+    'admin.category': 'Каталог санаты',
     'admin.catalog_empty': 'Каталог бос',
     'admin.catalog_empty_sub': 'Алғашқы тауарды қосыңыз',
     'admin.promos_empty': 'Акциялар жоқ',
@@ -1025,7 +1034,8 @@ abstract final class S {
 
     // location consent + wallet + referral + recently viewed
     'location.title': 'Геопозицияңызбен бөлісіңіз',
-    'location.body': 'Бұл жақын маңдағы дүкендерді көрсетуге және жеткізу нүктесін анықтауға көмектеседі.',
+    'location.body':
+        'Бұл жақын маңдағы дүкендерді көрсетуге және жеткізу нүктесін анықтауға көмектеседі.',
     'location.allow': 'Рұқсат беру',
     'location.later': 'Қазір емес',
     'wallet.title': 'Әмиян',
@@ -1047,7 +1057,8 @@ abstract final class S {
     'order.repeat': 'Тапсырысты қайталау',
     'order.repeated': 'Тауарлар себетке қосылды',
     'referral.title': 'Достарыңызды шақырыңыз',
-    'referral.body': 'Кодпен бөлісіңіз — досыңыз алғашқы тапсырыстан кейін бонус алады, сіз де оның төлемінен кейін аласыз.',
+    'referral.body':
+        'Кодпен бөлісіңіз — досыңыз алғашқы тапсырыстан кейін бонус алады, сіз де оның төлемінен кейін аласыз.',
     'referral.your_code': 'Сіздің кодыңыз',
     'referral.share': 'Бөлісу',
     'referral.invited': 'Шақырылды',
@@ -1100,8 +1111,7 @@ abstract final class S {
     'promobuilder.publish': 'Жариялау',
     'promobuilder.published': 'Акция жарияланды',
     'error.not_found': 'Табылмады',
-    'error.cannot_cancel':
-        'Тапсырыс дайындалып жатыр — болдырмау мүмкін емес',
+    'error.cannot_cancel': 'Тапсырыс дайындалып жатыр — болдырмау мүмкін емес',
     'error.cart_empty': 'Себет бос',
     'error.promo_not_found': 'Промокод табылмады немесе мерзімі бітті',
   };
@@ -1128,8 +1138,10 @@ abstract final class S {
     'splash.market': 'MARKET',
     'splash.tagline': 'Delivery across Kazakhstan',
     'welcome.title': 'KORA',
-    'welcome.subtitle':
-        'Restaurants, stores and pharmacies —\ndelivered to your door',
+    'welcome.subtitle': 'Everything from one store —\ndelivered to your door',
+    'welcome.f_delivery': 'Restaurants, groceries and pharmacies — in one app',
+    'welcome.f_cashback': 'Bonus cashback on every order',
+    'welcome.f_tracking': 'Live courier tracking on the map',
     'welcome.cta': 'Sign in with phone number',
 
     'phone.title': 'Your phone number',
@@ -1137,8 +1149,7 @@ abstract final class S {
     'phone.hint': '+7 700 000 00 00',
     'phone.semantic': 'Phone number',
     'phone.get_code': 'Get code',
-    'phone.dev_hint':
-        'Dev: …002 — manager, …003 — courier, …004 — admin',
+    'phone.dev_hint': 'Dev: …002 — manager, …003 — courier, …004 — admin',
     'phone.invalid': 'Enter a number in +7 XXX XXX XX XX format',
     'otp.title': 'SMS code',
     'otp.sent_to': 'Sent to {phone}',
@@ -1150,7 +1161,7 @@ abstract final class S {
     'otp.hint': '● ● ● ● ● ●',
     'otp.semantic': 'Confirmation code',
     'profile_setup.title': 'What is your name?',
-    'profile_setup.subtitle': 'Stores and couriers will see your name',
+    'profile_setup.subtitle': 'The store and couriers will see your name',
     'profile_setup.hint': 'Name',
     'profile_setup.continue': 'Continue',
 
@@ -1164,6 +1175,12 @@ abstract final class S {
     'home.free_delivery': '0 ₸ delivery',
     'home.categories': 'Categories',
     'home.recent': 'You viewed',
+    'home.deals': 'Deals & offers',
+    'home.promo_tag': 'Offer',
+    'home.catalog': 'Catalog',
+    'catalog.empty': 'Catalog is empty for now',
+    'catalog.empty_sub':
+        'The manager is filling the assortment — check back later',
     'home.load_error': 'Failed to load stores',
 
     'search.title': 'Search KORA',
@@ -1227,13 +1244,11 @@ abstract final class S {
     'checkout.need_address': 'Choose an address or a point on the map',
 
     'map.title': 'Delivery point',
-    'map.info':
-        'Share your delivery point so the courier can find you. '
-            'Tap the map or detect your location.',
+    'map.info': 'Share your delivery point so the courier can find you. '
+        'Tap the map or detect your location.',
     'map.address_hint': 'Street, building, apartment',
     'map.my_location': 'My location',
-    'map.no_gps':
-        'No location access — pick the point on the map manually',
+    'map.no_gps': 'No location access — pick the point on the map manually',
     'map.locate_fail': 'Could not determine location',
     'map.point_label': 'Delivery point',
     'map.point_auto': 'Map point ({lat}, {lng})',
@@ -1299,8 +1314,7 @@ abstract final class S {
     'chat.geo': 'Location',
     'chat.photo_unavailable':
         'Photo upload will be available once storage is connected',
-    'chat.voice_unavailable':
-        'Voice messages will arrive in the next update',
+    'chat.voice_unavailable': 'Voice messages will arrive in the next update',
     'chat.load_error': 'Failed to open chat',
 
     'call.ringing': 'Calling…',
@@ -1336,9 +1350,8 @@ abstract final class S {
     'profile.logout_msg': 'Cart and data stay on the device',
     'profile.delete': 'Delete account',
     'profile.delete_title': 'Delete account?',
-    'profile.delete_msg':
-        'This is irreversible. Order history is anonymized; '
-            'legally required data is retained in the archive.',
+    'profile.delete_msg': 'This is irreversible. Order history is anonymized; '
+        'legally required data is retained in the archive.',
     'profile.delete_confirm': 'Delete forever',
     'profile.edit_name': 'Your name',
     'profile.edit_tooltip': 'Edit',
@@ -1364,8 +1377,7 @@ abstract final class S {
     'security.biometric_sub': 'Face ID / fingerprint on app launch',
     'security.biometric_off': 'Biometrics unavailable on this device',
     'security.biometric_reason': 'Confirm to enable biometric sign-in',
-    'security.biometric_note':
-        'Biometric data never leaves the device.',
+    'security.biometric_note': 'Biometric data never leaves the device.',
     'sessions.title': 'Active sessions',
     'sessions.current': 'Current session',
     'sessions.now': 'Now',
@@ -1526,6 +1538,7 @@ abstract final class S {
     'admin.product_saved': 'Product saved',
     'admin.delete_product': 'Delete product?',
     'admin.deleted': 'Deleted',
+    'admin.category': 'Catalog category',
     'admin.catalog_empty': 'Catalog is empty',
     'admin.catalog_empty_sub': 'Add your first product',
     'admin.promos_empty': 'No promos',
@@ -1545,7 +1558,8 @@ abstract final class S {
 
     // location consent + wallet + referral + recently viewed
     'location.title': 'Share your location',
-    'location.body': 'It helps us show nearby stores and pin your delivery point.',
+    'location.body':
+        'It helps us show nearby stores and pin your delivery point.',
     'location.allow': 'Allow access',
     'location.later': 'Not now',
     'wallet.title': 'Wallet',
@@ -1567,7 +1581,8 @@ abstract final class S {
     'order.repeat': 'Repeat order',
     'order.repeated': 'Items added to cart',
     'referral.title': 'Invite friends',
-    'referral.body': 'Share your code — your friend gets a bonus after their first order, you get yours once it is paid.',
+    'referral.body':
+        'Share your code — your friend gets a bonus after their first order, you get yours once it is paid.',
     'referral.your_code': 'Your code',
     'referral.share': 'Share',
     'referral.invited': 'Invited',

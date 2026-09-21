@@ -104,8 +104,9 @@ class StoreScreen extends ConsumerWidget {
                       runSpacing: AppSpacing.xs,
                       children: [
                         _InfoChip(
-                            icon: AppIcons.star,
-                            label: s.rating.toStringAsFixed(1),),
+                          icon: AppIcons.star,
+                          label: s.rating.toStringAsFixed(1),
+                        ),
                         _InfoChip(
                           icon: AppIcons.clock,
                           label: '${s.etaMinutes} ${S.t('common.min')}',
@@ -136,51 +137,63 @@ class StoreScreen extends ConsumerWidget {
                   message: S.t('store.products_error'),
                 ),
               ),
-              data: (list) => SliverPadding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: AppSpacing.md,
-                    crossAxisSpacing: AppSpacing.md,
-                    childAspectRatio: 0.72,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (_, i) {
-                      final favIds =
-                          ref.watch(favoriteProductsProvider).value ??
-                              const <String>{};
-                      return KoraProductCard(
-                        name: list[i].name,
-                        priceTiyn: list[i].priceTiyn,
-                        oldPriceTiyn: list[i].oldPriceTiyn,
-                        imageUrl: list[i].imageUrl,
-                        blurHash: list[i].blurHash,
-                        available: list[i].available,
-                        isFavorite: favIds.contains(list[i].id),
-                        onFavorite: () => ref
-                            .read(favoriteProductsProvider.notifier)
-                            .toggle(list[i].id),
-                        onTap: () => context.push(
-                          '/store/$storeId/product/${list[i].id}',
+              data: (list) => list.isEmpty
+                  ? SliverToBoxAdapter(
+                      child: Padding(
+                        padding: AppSpacing.screenPadding,
+                        child: KoraEmptyState(
+                          icon: AppIcons.grocery,
+                          title: S.t('catalog.empty'),
+                          message: S.t('catalog.empty_sub'),
                         ),
-                        onAdd: () => ref
-                            .read(cartProvider.notifier)
-                            .add(list[i], 1)
-                            .then((_) {
-                          if (context.mounted) {
-                            KoraSnackbar.show(
-                              context,
-                              S.t('product.added'),
+                      ),
+                    )
+                  : SliverPadding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      sliver: SliverGrid(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: AppSpacing.md,
+                          crossAxisSpacing: AppSpacing.md,
+                          childAspectRatio: 0.72,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (_, i) {
+                            final favIds =
+                                ref.watch(favoriteProductsProvider).value ??
+                                    const <String>{};
+                            return KoraProductCard(
+                              name: list[i].name,
+                              priceTiyn: list[i].priceTiyn,
+                              oldPriceTiyn: list[i].oldPriceTiyn,
+                              imageUrl: list[i].imageUrl,
+                              blurHash: list[i].blurHash,
+                              available: list[i].available,
+                              isFavorite: favIds.contains(list[i].id),
+                              onFavorite: () => ref
+                                  .read(favoriteProductsProvider.notifier)
+                                  .toggle(list[i].id),
+                              onTap: () => context.push(
+                                '/store/$storeId/product/${list[i].id}',
+                              ),
+                              onAdd: () => ref
+                                  .read(cartProvider.notifier)
+                                  .add(list[i], 1)
+                                  .then((_) {
+                                if (context.mounted) {
+                                  KoraSnackbar.show(
+                                    context,
+                                    S.t('product.added'),
+                                  );
+                                }
+                              }),
                             );
-                          }
-                        }),
-                      );
-                    },
-                    childCount: list.length,
-                  ),
-                ),
-              ),
+                          },
+                          childCount: list.length,
+                        ),
+                      ),
+                    ),
             ),
           ],
         ),
@@ -506,30 +519,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   : ListView(
                       padding: const EdgeInsets.all(AppSpacing.lg),
                       children: [
-                        if (_results!.stores.isNotEmpty) ...[
-                          Text(
-                            S.t('search.stores'),
-                            style: AppTypography.title,
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          ..._results!.stores.map(
-                            (s) => Padding(
-                              padding: const EdgeInsets.only(
-                                bottom: AppSpacing.sm,
-                              ),
-                              child: KoraStoreCard(
-                                name: s.name,
-                                imageUrl: s.logoUrl,
-                                category: s.description,
-                                rating: s.rating,
-                                etaMinutes: s.etaMinutes,
-                                deliveryFeeTiyn: s.deliveryFeeTiyn,
-                                isOpen: s.isOpen,
-                                onTap: () => context.push('/store/${s.id}'),
-                              ),
-                            ),
-                          ),
-                        ],
                         if (_results!.products.isNotEmpty) ...[
                           Text(
                             S.t('search.products'),
@@ -601,47 +590,42 @@ class CategoryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cats = ref.watch(categoriesProvider).value ?? const [];
     final cat = cats.where((c) => c.id == categoryId).firstOrNull;
-    final stores = ref.watch(storesProvider);
+    final products = ref.watch(catalogProvider);
 
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
         title: Text(name ?? cat?.name ?? S.t('category.title')),
       ),
-      body: stores.when(
+      body: products.when(
         loading: () => const Column(
           children: [KoraCardSkeleton(), KoraCardSkeleton()],
         ),
         error: (_, __) => KoraErrorState(
           message: S.t('category.load_error'),
-          onRetry: () => ref.invalidate(storesProvider),
+          onRetry: () => ref.invalidate(catalogProvider),
         ),
         data: (list) {
           final filtered = cat == null
               ? list
-              : list.where((s) => s.kind == cat.kind).toList();
+              : list.where((p) => p.categoryId == cat.id).toList();
           if (filtered.isEmpty) {
             return KoraEmptyState(
-              icon: AppIcons.store,
-              title: S.t('category.empty'),
-              message: S.t('category.empty_sub'),
+              icon: AppIcons.category,
+              title: S.t('catalog.empty'),
+              message: S.t('catalog.empty_sub'),
             );
           }
-          return ListView.separated(
+          return GridView.builder(
             padding: const EdgeInsets.all(AppSpacing.lg),
-            itemCount: filtered.length,
-            separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.lg),
-            itemBuilder: (_, i) => KoraStoreHeroCard(
-              name: filtered[i].name,
-              imageUrl: filtered[i].bannerUrl ?? filtered[i].logoUrl,
-              blurHash: filtered[i].blurHash,
-              category: filtered[i].description,
-              rating: filtered[i].rating,
-              etaMinutes: filtered[i].etaMinutes,
-              deliveryFeeTiyn: filtered[i].deliveryFeeTiyn,
-              isOpen: filtered[i].isOpen,
-              onTap: () => context.push('/store/${filtered[i].id}'),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: AppSpacing.md,
+              crossAxisSpacing: AppSpacing.md,
+              childAspectRatio: 0.78,
             ),
+            itemCount: filtered.length,
+            itemBuilder: (_, i) => _GridProductTile(p: filtered[i]),
           );
         },
       ),
@@ -649,10 +633,102 @@ class CategoryScreen extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Search helpers — popular categories + recently viewed as suggestions,
-// quick-add button on product rows.
-// ---------------------------------------------------------------------------
+/// Grid tile shared by the category page — image, badge, price, add.
+class _GridProductTile extends ConsumerWidget {
+  const _GridProductTile({required this.p});
+
+  final Product p;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final old = p.oldPriceTiyn;
+    final pct = old == null ? 0 : ((1 - p.priceTiyn / old) * 100).round();
+    return KoraCard(
+      padding: EdgeInsets.zero,
+      onTap: () => context.push('/store/${p.storeId}/product/${p.id}'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(AppRadius.lg),
+                  ),
+                  child: KoraImage(
+                    url: p.imageUrl,
+                    blurHash: p.blurHash,
+                  ),
+                ),
+                if (pct > 0)
+                  Positioned(
+                    top: AppSpacing.sm,
+                    left: AppSpacing.sm,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: KoraColors.error,
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
+                      child: Text(
+                        '-$pct%',
+                        style: AppTypography.caption.copyWith(
+                          color: KoraColors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  p.name,
+                  style: AppTypography.caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Expanded(
+                      child: KoraPrice(
+                        tiyn: p.priceTiyn,
+                        style: AppTypography.label,
+                      ),
+                    ),
+                    if (p.available)
+                      _QuickAddButton(
+                        onTap: () =>
+                            ref.read(cartProvider.notifier).add(p, 1).then((_) {
+                          if (context.mounted) {
+                            KoraSnackbar.show(
+                              context,
+                              S.t('product.added'),
+                            );
+                          }
+                        }),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _SearchSuggestions extends ConsumerWidget {
   const _SearchSuggestions({required this.onPick});

@@ -53,7 +53,9 @@ void main() {
   group('KzPhoneFormatter', () {
     test('toE164 strips formatting', () {
       expect(
-          KzPhoneFormatter.toE164('+7 700 123 45 67'), '+77001234567',);
+        KzPhoneFormatter.toE164('+7 700 123 45 67'),
+        '+77001234567',
+      );
     });
 
     test('masks input to +7 format', () {
@@ -147,10 +149,14 @@ void main() {
   group('MockApiClient staff login', () {
     test('correct credentials → admin user with tokens', () async {
       final api = MockApiClient();
-      final res = await api.post('/auth/login', auth: false, body: {
-        'email': 'hiwatchkz@mail.ru',
-        'password': '667228',
-      },) as Map<String, dynamic>;
+      final res = await api.post(
+        '/auth/login',
+        auth: false,
+        body: {
+          'email': 'hiwatchkz@mail.ru',
+          'password': '667228',
+        },
+      ) as Map<String, dynamic>;
       expect((res['user'] as Map)['role'], 'admin');
       expect(res['accessToken'], isNotEmpty);
       expect(res['refreshToken'], isNotEmpty);
@@ -159,10 +165,14 @@ void main() {
     test('wrong password → 401 INVALID_CREDENTIALS', () async {
       final api = MockApiClient();
       try {
-        await api.post('/auth/login', auth: false, body: {
-          'email': 'hiwatchkz@mail.ru',
-          'password': 'wrong',
-        },);
+        await api.post(
+          '/auth/login',
+          auth: false,
+          body: {
+            'email': 'hiwatchkz@mail.ru',
+            'password': 'wrong',
+          },
+        );
         fail('should have thrown');
       } on ApiException catch (e) {
         expect(e.code, 'INVALID_CREDENTIALS');
@@ -174,29 +184,60 @@ void main() {
   group('MockApiClient retention & wallet endpoints', () {
     Future<MockApiClient> loggedIn() async {
       final api = MockApiClient();
-      await api.post('/auth/verify-otp', auth: false, body: {
-        'phone': '+77001234567',
-        'code': '123456',
-      },);
+      await api.post(
+        '/auth/verify-otp',
+        auth: false,
+        body: {
+          'phone': '+77001234567',
+          'code': '123456',
+        },
+      );
       return api;
+    }
+
+    /// The catalog ships empty — tests seed products through the same
+    /// admin endpoint the manager UI uses.
+    Future<void> seed(
+      MockApiClient api,
+      String id, {
+      int price = 69000,
+      int stock = 50,
+    }) async {
+      await api.post(
+        '/admin/products',
+        body: {
+          'id': id,
+          'name': 'Тест $id',
+          'priceTiyn': price,
+          'stock': stock,
+        },
+      );
     }
 
     test('recently-viewed records and returns products, newest first',
         () async {
       final api = await loggedIn();
-      await api.post('/users/me/recently-viewed',
-          body: {'productId': 'p-lagman'},);
-      await api.post('/users/me/recently-viewed',
-          body: {'productId': 'p-plov'},);
-      final res = await api.get('/users/me/recently-viewed')
-          as Map<String, dynamic>;
+      await seed(api, 'p-lagman');
+      await seed(api, 'p-plov', price: 249000);
+      await api.post(
+        '/users/me/recently-viewed',
+        body: {'productId': 'p-lagman'},
+      );
+      await api.post(
+        '/users/me/recently-viewed',
+        body: {'productId': 'p-plov'},
+      );
+      final res =
+          await api.get('/users/me/recently-viewed') as Map<String, dynamic>;
       final items = res['items'] as List;
       expect((items.first as Map)['id'], 'p-plov');
       // Re-view moves to front without duplicating.
-      await api.post('/users/me/recently-viewed',
-          body: {'productId': 'p-lagman'},);
-      final res2 = await api.get('/users/me/recently-viewed')
-          as Map<String, dynamic>;
+      await api.post(
+        '/users/me/recently-viewed',
+        body: {'productId': 'p-lagman'},
+      );
+      final res2 =
+          await api.get('/users/me/recently-viewed') as Map<String, dynamic>;
       final items2 = res2['items'] as List;
       expect(items2.length, 2);
       expect((items2.first as Map)['id'], 'p-lagman');
@@ -204,14 +245,17 @@ void main() {
 
     test('product favorites round-trip', () async {
       final api = await loggedIn();
-      await api.post('/users/me/favorites/products',
-          body: {'productId': 'p-plov'},);
-      var res = await api.get('/users/me/favorites/products')
-          as Map<String, dynamic>;
+      await seed(api, 'p-plov', price: 249000);
+      await api.post(
+        '/users/me/favorites/products',
+        body: {'productId': 'p-plov'},
+      );
+      var res =
+          await api.get('/users/me/favorites/products') as Map<String, dynamic>;
       expect((res['items'] as List).length, 1);
       await api.delete('/users/me/favorites/products/p-plov');
-      res = await api.get('/users/me/favorites/products')
-          as Map<String, dynamic>;
+      res =
+          await api.get('/users/me/favorites/products') as Map<String, dynamic>;
       expect((res['items'] as List), isEmpty);
     });
 
@@ -219,10 +263,15 @@ void main() {
       final api = await loggedIn();
       final before = (await api.get('/users/me/wallet')
           as Map<String, dynamic>)['balanceTiyn'] as int;
-      await api.post('/cart/items',
-          body: {'productId': 'p-plov', 'qty': 1},);
-      await api.post('/checkout',
-          body: {'address': 'Шымкент, ул. Тестовая 1'},);
+      await seed(api, 'p-plov', price: 249000);
+      await api.post(
+        '/cart/items',
+        body: {'productId': 'p-plov', 'qty': 1},
+      );
+      await api.post(
+        '/checkout',
+        body: {'address': 'Шымкент, ул. Тестовая 1'},
+      );
       final after = (await api.get('/users/me/wallet')
           as Map<String, dynamic>)['balanceTiyn'] as int;
       expect(after, greaterThan(before));
@@ -233,14 +282,18 @@ void main() {
 
     test('repeat order re-adds items to cart', () async {
       final api = await loggedIn();
-      await api.post('/cart/items',
-          body: {'productId': 'p-samsa', 'qty': 2},);
-      final checkout = await api.post('/checkout',
-          body: {'address': 'A'},) as Map<String, dynamic>;
-      final orderId =
-          (checkout['order'] as Map)['id'] as String;
-      final res = await api.post('/orders/$orderId/repeat')
-          as Map<String, dynamic>;
+      await seed(api, 'p-samsa');
+      await api.post(
+        '/cart/items',
+        body: {'productId': 'p-samsa', 'qty': 2},
+      );
+      final checkout = await api.post(
+        '/checkout',
+        body: {'address': 'A'},
+      ) as Map<String, dynamic>;
+      final orderId = (checkout['order'] as Map)['id'] as String;
+      final res =
+          await api.post('/orders/$orderId/repeat') as Map<String, dynamic>;
       expect(res['added'], 1);
       final cart = await api.get('/cart') as Map<String, dynamic>;
       expect((cart['items'] as List).length, 1);
@@ -248,15 +301,17 @@ void main() {
 
     test('manager schedule get/put round-trip', () async {
       final api = await loggedIn();
-      await api.put('/manager/schedule', body: {
-        'storeId': 'st-handam',
-        'days': {
-          '0': {'open': 540, 'close': 1260},
-          '6': null,
+      await api.put(
+        '/manager/schedule',
+        body: {
+          'storeId': 'kora-market',
+          'days': {
+            '0': {'open': 540, 'close': 1260},
+            '6': null,
+          },
         },
-      },);
-      final res = await api.get('/manager/schedule')
-          as Map<String, dynamic>;
+      );
+      final res = await api.get('/manager/schedule') as Map<String, dynamic>;
       final days = res['days'] as Map;
       expect((days['0'] as Map)['open'], 540);
       expect(days['6'], isNull);
@@ -264,12 +319,16 @@ void main() {
 
     test('price drop on favorited product creates notification', () async {
       final api = await loggedIn();
-      await api.post('/users/me/favorites/products',
-          body: {'productId': 'p-plov'},);
-      await api.patch('/admin/products/p-plov',
-          body: {'priceTiyn': 199000},);
-      final notifs = await api.get('/notifications')
-          as Map<String, dynamic>;
+      await seed(api, 'p-plov', price: 249000);
+      await api.post(
+        '/users/me/favorites/products',
+        body: {'productId': 'p-plov'},
+      );
+      await api.patch(
+        '/admin/products/p-plov',
+        body: {'priceTiyn': 199000},
+      );
+      final notifs = await api.get('/notifications') as Map<String, dynamic>;
       final items = notifs['items'] as List;
       expect(
         items.any((n) => (n as Map)['kind'] == 'price_drop'),
@@ -281,12 +340,18 @@ void main() {
       final api = await loggedIn();
       final before = (await api.get('/users/me/wallet')
           as Map<String, dynamic>)['balanceTiyn'] as int;
-      await api.post('/cart/items',
-          body: {'productId': 'p-samsa', 'qty': 1},);
-      final checkout = await api.post('/checkout', body: {
-        'address': 'A',
-        'paymentMethod': 'wallet',
-      },) as Map<String, dynamic>;
+      await seed(api, 'p-samsa');
+      await api.post(
+        '/cart/items',
+        body: {'productId': 'p-samsa', 'qty': 1},
+      );
+      final checkout = await api.post(
+        '/checkout',
+        body: {
+          'address': 'A',
+          'paymentMethod': 'wallet',
+        },
+      ) as Map<String, dynamic>;
       final order = checkout['order'] as Map;
       expect(order['paymentStatus'], 'paid');
       final after = (await api.get('/users/me/wallet')
@@ -294,19 +359,29 @@ void main() {
       expect(after, lessThan(before));
       final txns = await api.get('/users/me/wallet/transactions')
           as Map<String, dynamic>;
-      expect((txns['items'] as List).any(
-          (t) => (t as Map)['kind'] == 'spend',), isTrue,);
+      expect(
+        (txns['items'] as List).any(
+          (t) => (t as Map)['kind'] == 'spend',
+        ),
+        isTrue,
+      );
     });
 
     test('wallet payment with insufficient funds → 402', () async {
       final api = await loggedIn();
-      await api.post('/cart/items',
-          body: {'productId': 'p-plov', 'qty': 40},);
+      await seed(api, 'p-plov', price: 249000);
+      await api.post(
+        '/cart/items',
+        body: {'productId': 'p-plov', 'qty': 40},
+      );
       try {
-        await api.post('/checkout', body: {
-          'address': 'A',
-          'paymentMethod': 'wallet',
-        },);
+        await api.post(
+          '/checkout',
+          body: {
+            'address': 'A',
+            'paymentMethod': 'wallet',
+          },
+        );
         fail('should have thrown');
       } on ApiException catch (e) {
         expect(e.code, 'INSUFFICIENT_FUNDS');
@@ -315,16 +390,21 @@ void main() {
 
     test('support ticket keeps first message + thread replies', () async {
       final api = await loggedIn();
-      final created = await api.post('/support/tickets', body: {
-        'subject': 'Тест',
-        'message': 'Первое сообщение',
-      },) as Map<String, dynamic>;
+      final created = await api.post(
+        '/support/tickets',
+        body: {
+          'subject': 'Тест',
+          'message': 'Первое сообщение',
+        },
+      ) as Map<String, dynamic>;
       final id = created['id'] as String;
       expect((created['messages'] as List).length, 1);
-      await api.post('/support/tickets/$id/messages',
-          body: {'text': 'Ещё вопрос'},);
-      final detail = await api.get('/support/tickets/$id')
-          as Map<String, dynamic>;
+      await api.post(
+        '/support/tickets/$id/messages',
+        body: {'text': 'Ещё вопрос'},
+      );
+      final detail =
+          await api.get('/support/tickets/$id') as Map<String, dynamic>;
       expect((detail['messages'] as List).length, 2);
     });
 
@@ -332,12 +412,16 @@ void main() {
       final api = await loggedIn();
       await api.post('/notifications/read', body: const {});
       final feed = await api.get('/notifications') as Map<String, dynamic>;
-      expect((feed['items'] as List)
-          .every((n) => (n as Map)['read'] == true), isTrue,);
-      await api.post('/notifications/preferences',
-          body: {'promos': false},);
-      final prefs = await api.get('/notifications/preferences')
-          as Map<String, dynamic>;
+      expect(
+        (feed['items'] as List).every((n) => (n as Map)['read'] == true),
+        isTrue,
+      );
+      await api.post(
+        '/notifications/preferences',
+        body: {'promos': false},
+      );
+      final prefs =
+          await api.get('/notifications/preferences') as Map<String, dynamic>;
       expect((prefs['preferences'] as Map)['promos'], false);
       expect((prefs['preferences'] as Map)['orders'], true);
     });
@@ -360,43 +444,70 @@ void main() {
 
     test('bogo promo code gives every 3rd unit free', () async {
       final api = await loggedIn();
-      await api.post('/admin/promo-codes', body: {
-        'code': 'BOGO',
-        'bogo': true,
-      },);
-      await api.post('/cart/items',
-          body: {'productId': 'p-samsa', 'qty': 3},);
-      final res = await api.post('/promo-codes/validate',
-          body: {'code': 'BOGO'},) as Map<String, dynamic>;
+      await api.post(
+        '/admin/promo-codes',
+        body: {
+          'code': 'BOGO',
+          'bogo': true,
+        },
+      );
+      await seed(api, 'p-samsa');
+      await api.post(
+        '/cart/items',
+        body: {'productId': 'p-samsa', 'qty': 3},
+      );
+      final res = await api.post(
+        '/promo-codes/validate',
+        body: {'code': 'BOGO'},
+      ) as Map<String, dynamic>;
       expect(res['valid'], isTrue);
       expect((res['discountTiyn'] as num).toInt(), greaterThan(0));
       // Applied at checkout too.
-      final checkout = await api.post('/checkout', body: {
-        'address': 'A',
-        'promoCode': 'BOGO',
-      },) as Map<String, dynamic>;
+      final checkout = await api.post(
+        '/checkout',
+        body: {
+          'address': 'A',
+          'promoCode': 'BOGO',
+        },
+      ) as Map<String, dynamic>;
       expect((checkout['order'] as Map)['discountTiyn'], greaterThan(0));
     });
 
     test('first-order promo rejected after a delivered order', () async {
       final api = await loggedIn();
-      await api.post('/admin/promo-codes', body: {
-        'code': 'FIRST10',
-        'percent': 10,
-        'firstOrder': true,
-      },);
+      await api.post(
+        '/admin/promo-codes',
+        body: {
+          'code': 'FIRST10',
+          'percent': 10,
+          'firstOrder': true,
+        },
+      );
       // Place + deliver an order via courier flow.
-      await api.post('/cart/items',
-          body: {'productId': 'p-samsa', 'qty': 1},);
-      final checkout = await api.post('/checkout',
-          body: {'address': 'A'},) as Map<String, dynamic>;
+      await seed(api, 'p-samsa');
+      await seed(api, 'p-samsa');
+      await api.post(
+        '/cart/items',
+        body: {'productId': 'p-samsa', 'qty': 1},
+      );
+      final checkout = await api.post(
+        '/checkout',
+        body: {'address': 'A'},
+      ) as Map<String, dynamic>;
       final oid = (checkout['order'] as Map)['id'] as String;
-      await api.post('/couriers/orders/$oid/status',
-          body: {'status': 'delivered'},);
-      await api.post('/cart/items',
-          body: {'productId': 'p-samsa', 'qty': 1},);
-      final res = await api.post('/promo-codes/validate',
-          body: {'code': 'FIRST10'},) as Map<String, dynamic>;
+      await api.post(
+        '/couriers/orders/$oid/status',
+        body: {'status': 'delivered'},
+      );
+      await seed(api, 'p-samsa');
+      await api.post(
+        '/cart/items',
+        body: {'productId': 'p-samsa', 'qty': 1},
+      );
+      final res = await api.post(
+        '/promo-codes/validate',
+        body: {'code': 'FIRST10'},
+      ) as Map<String, dynamic>;
       expect(res['valid'], isFalse);
     });
 
@@ -404,12 +515,18 @@ void main() {
       final api = await loggedIn();
       final before = (await api.get('/users/me/wallet')
           as Map<String, dynamic>)['balanceTiyn'] as int;
-      await api.post('/cart/items',
-          body: {'productId': 'p-samsa', 'qty': 1},);
-      final checkout = await api.post('/checkout', body: {
-        'address': 'A',
-        'paymentMethod': 'wallet',
-      },) as Map<String, dynamic>;
+      await seed(api, 'p-samsa');
+      await api.post(
+        '/cart/items',
+        body: {'productId': 'p-samsa', 'qty': 1},
+      );
+      final checkout = await api.post(
+        '/checkout',
+        body: {
+          'address': 'A',
+          'paymentMethod': 'wallet',
+        },
+      ) as Map<String, dynamic>;
       final oid = (checkout['order'] as Map)['id'] as String;
       await api.post('/orders/$oid/cancel', body: const {});
       final after = (await api.get('/users/me/wallet')
@@ -418,24 +535,28 @@ void main() {
       expect(after, greaterThan(before - 1));
       final txns = await api.get('/users/me/wallet/transactions')
           as Map<String, dynamic>;
-      expect((txns['items'] as List).any(
-          (t) => (t as Map)['kind'] == 'refund',), isTrue,);
+      expect(
+        (txns['items'] as List).any(
+          (t) => (t as Map)['kind'] == 'refund',
+        ),
+        isTrue,
+      );
     });
 
     test('courier assignment advances a real order', () async {
       final api = await loggedIn();
       await api.post('/couriers/status', body: {'status': 'online'});
-      final offers = await api.get('/couriers/assignments')
-          as Map<String, dynamic>;
+      final offers =
+          await api.get('/couriers/assignments') as Map<String, dynamic>;
       final offer = (offers['items'] as List).first as Map;
-      await api
-          .post('/couriers/assignments/${offer['id']}/accept');
+      await api.post('/couriers/assignments/${offer['id']}/accept');
       final updated = await api.post(
-          '/couriers/orders/${offer['orderId']}/status',
-          body: {'status': 'pickedUp'},) as Map<String, dynamic>;
+        '/couriers/orders/${offer['orderId']}/status',
+        body: {'status': 'pickedUp'},
+      ) as Map<String, dynamic>;
       expect(updated['status'], 'pickedUp');
-      final detail = await api.get('/orders/${offer['orderId']}')
-          as Map<String, dynamic>;
+      final detail =
+          await api.get('/orders/${offer['orderId']}') as Map<String, dynamic>;
       expect(detail['id'], offer['orderId']);
     });
   });

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/config/env.dart';
 import '../../../core/l10n/app_strings.dart';
+import '../../../core/media/kora_image.dart';
 import '../../../core/models/models.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_icons.dart';
@@ -32,13 +33,53 @@ class WelcomeScreen extends StatelessWidget {
           padding: AppSpacing.screenPadding,
           child: Column(
             children: [
-              const Spacer(),
-              Image.asset(
-                'assets/brand/kora_logo_k.png',
-                width: 140,
-                height: 140,
+              const SizedBox(height: AppSpacing.xl),
+              ClipRRect(
+                borderRadius: AppRadius.card,
+                child: Stack(
+                  children: [
+                    const KoraImage(
+                      url:
+                          'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1000&q=80',
+                      height: 230,
+                      width: double.infinity,
+                    ),
+                    Positioned(
+                      bottom: AppSpacing.md,
+                      left: AppSpacing.md,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: AppSpacing.xxs,
+                        ),
+                        decoration: BoxDecoration(
+                          color: KoraColors.white,
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(
+                              'assets/brand/kora_logo_k.png',
+                              width: 18,
+                              height: 18,
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Text(
+                              'KORA',
+                              style: AppTypography.label.copyWith(
+                                color: KoraColors.brandNavy,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: AppSpacing.lg),
+              const Spacer(),
               Text(
                 'KORA',
                 style: AppTypography.displayLarge.copyWith(
@@ -54,6 +95,21 @@ class WelcomeScreen extends StatelessWidget {
                 S.t('welcome.subtitle'),
                 textAlign: TextAlign.center,
                 style: AppTypography.bodySecondary,
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              _FeatureRow(
+                icon: AppIcons.bike,
+                text: S.t('welcome.f_delivery'),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _FeatureRow(
+                icon: AppIcons.wallet,
+                text: S.t('welcome.f_cashback'),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _FeatureRow(
+                icon: AppIcons.locationOut,
+                text: S.t('welcome.f_tracking'),
               ),
               const Spacer(),
               KoraButton(
@@ -86,8 +142,7 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
   bool _loading = false;
   String? _error;
 
-  bool get _valid =>
-      KzPhoneFormatter.toE164(_controller.text).length == 12;
+  bool get _valid => KzPhoneFormatter.toE164(_controller.text).length == 12;
 
   Future<void> _submit() async {
     setState(() {
@@ -326,8 +381,7 @@ class ProfileSetupScreen extends ConsumerStatefulWidget {
   const ProfileSetupScreen({super.key});
 
   @override
-  ConsumerState<ProfileSetupScreen> createState() =>
-      _ProfileSetupScreenState();
+  ConsumerState<ProfileSetupScreen> createState() => _ProfileSetupScreenState();
 }
 
 class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
@@ -345,9 +399,8 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     if (name.isEmpty) return;
     setState(() => _loading = true);
     try {
-      final user = await ref
-          .read(authRepositoryProvider)
-          .updateProfile(name: name);
+      final user =
+          await ref.read(authRepositoryProvider).updateProfile(name: name);
       if (!mounted) return;
       ref.read(authControllerProvider.notifier).setUser(user);
       context.go('/home');
@@ -384,8 +437,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
               KoraButton(
                 label: S.t('profile_setup.continue'),
                 loading: _loading,
-                onPressed:
-                    _controller.text.trim().isNotEmpty ? _save : null,
+                onPressed: _controller.text.trim().isNotEmpty ? _save : null,
               ),
               const SizedBox(height: AppSpacing.xl),
             ],
@@ -395,7 +447,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     );
   }
 }
-
 
 // ---------------------------------------------------------------------------
 // Staff console login — email + password (manager/admin). Credentials are
@@ -446,12 +497,14 @@ class _StaffLoginSheetState extends ConsumerState<StaffLoginSheet> {
       Navigator.of(context).pop();
       // Admins and managers land on their consoles, not the customer home.
       final role = result.user.role;
-      router.go(switch (role) {
-        UserRole.admin => '/admin',
-        UserRole.manager => '/manager',
-        UserRole.courier => '/courier',
-        UserRole.customer => '/home',
-      },);
+      router.go(
+        switch (role) {
+          UserRole.admin => '/admin',
+          UserRole.manager => '/manager',
+          UserRole.courier => '/courier',
+          UserRole.customer => '/home',
+        },
+      );
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } finally {
@@ -476,13 +529,18 @@ class _StaffLoginSheetState extends ConsumerState<StaffLoginSheet> {
                   gradient: KoraColors.primaryGradient,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(AppIcons.admin,
-                    color: KoraColors.white, size: 20,),
+                child: const Icon(
+                  AppIcons.admin,
+                  color: KoraColors.white,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
-                child: Text(S.t('admin.login_title'),
-                    style: AppTypography.title,),
+                child: Text(
+                  S.t('admin.login_title'),
+                  style: AppTypography.title,
+                ),
               ),
             ],
           ),
@@ -519,6 +577,32 @@ class _StaffLoginSheetState extends ConsumerState<StaffLoginSheet> {
           SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
         ],
       ),
+    );
+  }
+}
+
+class _FeatureRow extends StatelessWidget {
+  const _FeatureRow({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: KoraColors.lightPurple,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          child: Icon(icon, color: KoraColors.primary, size: 18),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(child: Text(text, style: AppTypography.body)),
+      ],
     );
   }
 }

@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
@@ -75,7 +75,7 @@ class MockApiClient implements ApiClient {
   /// Store working hours per weekday (0=Mon..6=Sun). open/close in
   /// minutes from midnight; null = closed. Editable in Manager Mode.
   final Map<String, Map<int, ({int open, int close})?>> _schedules = {
-    'st-handam': {
+    'kora-market': {
       for (var d = 0; d < 6; d++) d: (open: 10 * 60, close: 21 * 60),
       6: null,
     },
@@ -84,9 +84,24 @@ class MockApiClient implements ApiClient {
   int _walletBalanceTiyn = 250000;
   final _walletTxns = <Map<String, dynamic>>[];
   final _users = <User>[
-    const User(id: 'u-manager', phone: '+77000000002', name: 'Мейірбан', role: UserRole.manager),
-    const User(id: 'u-courier', phone: '+77000000003', name: 'Арман', role: UserRole.courier),
-    const User(id: 'u-admin', phone: '+77000000004', name: 'Admin', role: UserRole.admin),
+    const User(
+      id: 'u-manager',
+      phone: '+77000000002',
+      name: 'Мейірбан',
+      role: UserRole.manager,
+    ),
+    const User(
+      id: 'u-courier',
+      phone: '+77000000003',
+      name: 'Арман',
+      role: UserRole.courier,
+    ),
+    const User(
+      id: 'u-admin',
+      phone: '+77000000004',
+      name: 'Admin',
+      role: UserRole.admin,
+    ),
   ];
   final _audit = <AuditEntry>[];
 
@@ -134,7 +149,10 @@ class MockApiClient implements ApiClient {
     await Future<void>.delayed(Duration(milliseconds: 120 + _rng.nextInt(280)));
     if (auth && _user == null && !path.startsWith('/auth')) {
       throw const ApiException(
-          code: 'UNAUTHORIZED', message: 'Требуется вход', statusCode: 401,);
+        code: 'UNAUTHORIZED',
+        message: 'Требуется вход',
+        statusCode: 401,
+      );
     }
     final seg = path.split('/').where((s) => s.isNotEmpty).toList();
     final b = (body as Map?)?.cast<String, dynamic>() ?? const {};
@@ -163,9 +181,19 @@ class MockApiClient implements ApiClient {
     if (seg[0] == 'categories') {
       return _wrap(MockData.categories.map((c) => _catJson(c)));
     }
+    if (seg[0] == 'products' && seg.length == 1 && method == 'GET') {
+      final items = _products.where(
+        (p) => q['storeId'] == null || p.storeId == q['storeId'],
+      );
+      return _wrap(items.map((p) => _productJson(p)));
+    }
     if (seg[0] == 'products' && seg.length == 2 && method == 'GET') {
-      return _productJson(_products.firstWhere((p) => p.id == seg[1],
-          orElse: () => throw _notFound('Товар не найден'),),);
+      return _productJson(
+        _products.firstWhere(
+          (p) => p.id == seg[1],
+          orElse: () => throw _notFound('Товар не найден'),
+        ),
+      );
     }
     if (seg[0] == 'search') return _search(q);
     if (seg[0] == 'cart') return _cart(method, seg, b);
@@ -204,9 +232,10 @@ class MockApiClient implements ApiClient {
         final phone = b['phone'] as String? ?? '';
         if (!RegExp(r'^\+7\d{10}$').hasMatch(phone)) {
           throw const ApiException(
-              code: 'INVALID_PHONE',
-              message: 'Введите номер в формате +7 XXX XXX XX XX',
-              statusCode: 400,);
+            code: 'INVALID_PHONE',
+            message: 'Введите номер в формате +7 XXX XXX XX XX',
+            statusCode: 400,
+          );
         }
         return {
           'requestId': _id('otp'),
@@ -218,7 +247,10 @@ class MockApiClient implements ApiClient {
         final code = b['code'] as String? ?? '';
         if (code.length != 6) {
           throw const ApiException(
-              code: 'INVALID_OTP', message: 'Неверный код', statusCode: 400,);
+            code: 'INVALID_OTP',
+            message: 'Неверный код',
+            statusCode: 400,
+          );
         }
         final phone = b['phone'] as String? ?? '+77000000001';
         _user = _roleForPhone(phone);
@@ -234,12 +266,10 @@ class MockApiClient implements ApiClient {
           'refreshToken': 'mock-refresh-${_seq++}',
         };
       case 'login':
-        final email =
-            (b['email'] as String? ?? '').trim().toLowerCase();
+        final email = (b['email'] as String? ?? '').trim().toLowerCase();
         final password = b['password'] as String? ?? '';
-        final digest = sha256
-            .convert(utf8.encode('$email:$password'))
-            .toString();
+        final digest =
+            sha256.convert(utf8.encode('$email:$password')).toString();
         if (email != _staffEmail || digest != _staffPasswordHash) {
           throw const ApiException(
             code: 'INVALID_CREDENTIALS',
@@ -310,9 +340,11 @@ class MockApiClient implements ApiClient {
       // Product favorites: /users/me/favorites/products[/:id]
       if (seg.length >= 4 && _s(seg, 3) == 'products') {
         if (method == 'GET') {
-          return _wrap(_products
-              .where((p) => _favoriteProductIds.contains(p.id))
-              .map(_productJson),);
+          return _wrap(
+            _products
+                .where((p) => _favoriteProductIds.contains(p.id))
+                .map(_productJson),
+          );
         }
         if (method == 'POST' && seg.length == 4) {
           _favoriteProductIds.add(b['productId'] as String? ?? '');
@@ -324,7 +356,9 @@ class MockApiClient implements ApiClient {
         }
       }
       if (method == 'GET') {
-        return _wrap(_stores.where((s) => _favoriteIds.contains(s.id)).map(_storeJson));
+        return _wrap(
+          _stores.where((s) => _favoriteIds.contains(s.id)).map(_storeJson),
+        );
       }
       if (method == 'POST') {
         _favoriteIds.add(b['storeId'] as String? ?? '');
@@ -337,10 +371,12 @@ class MockApiClient implements ApiClient {
     }
     if (_s(seg, 1) == 'me' && _s(seg, 2) == 'recently-viewed') {
       if (method == 'GET') {
-        return _wrap(_recentlyViewed
-            .map((id) => _products.where((p) => p.id == id).firstOrNull)
-            .nonNulls
-            .map(_productJson),);
+        return _wrap(
+          _recentlyViewed
+              .map((id) => _products.where((p) => p.id == id).firstOrNull)
+              .nonNulls
+              .map(_productJson),
+        );
       }
       if (method == 'POST') {
         final pid = b['productId'] as String? ?? '';
@@ -372,8 +408,19 @@ class MockApiClient implements ApiClient {
     }
     if (_s(seg, 1) == 'me' && _s(seg, 2) == 'sessions') {
       return _wrap([
-        {'id': 's-current', 'device': 'Это устройство', 'createdAt': DateTime.now().toIso8601String(), 'current': true},
-        {'id': 's-old', 'device': 'Samsung Galaxy S24', 'createdAt': DateTime.now().subtract(const Duration(days: 12)).toIso8601String()},
+        {
+          'id': 's-current',
+          'device': 'Это устройство',
+          'createdAt': DateTime.now().toIso8601String(),
+          'current': true,
+        },
+        {
+          'id': 's-old',
+          'device': 'Samsung Galaxy S24',
+          'createdAt': DateTime.now()
+              .subtract(const Duration(days: 12))
+              .toIso8601String(),
+        },
       ]);
     }
     throw _notFound('users');
@@ -390,17 +437,19 @@ class MockApiClient implements ApiClient {
         list = list.where((s) => s.kind.name == kind).toList();
       }
       if (query.isNotEmpty) {
-        list = list
-            .where((s) => s.name.toLowerCase().contains(query))
-            .toList();
+        list = list.where((s) => s.name.toLowerCase().contains(query)).toList();
       }
       return _wrap(list.map(_storeJson));
     }
-    final store = _stores.firstWhere((s) => s.id == seg[1],
-        orElse: () => throw _notFound('Магазин не найден'),);
+    final store = _stores.firstWhere(
+      (s) => s.id == seg[1],
+      orElse: () => throw _notFound('Магазин не найден'),
+    );
     if (seg.length == 2) return _storeJson(store);
     if (seg[2] == 'products') {
-      return _wrap(_products.where((p) => p.storeId == store.id).map(_productJson));
+      return _wrap(
+        _products.where((p) => p.storeId == store.id).map(_productJson),
+      );
     }
     throw _notFound('stores');
   }
@@ -411,7 +460,8 @@ class MockApiClient implements ApiClient {
       return {'items': <dynamic>[], 'nextCursor': null};
     }
     // tiny typo-tolerance: match on substring of first 4+ chars.
-    final stem = query.length > 4 ? query.substring(0, query.length - 1) : query;
+    final stem =
+        query.length > 4 ? query.substring(0, query.length - 1) : query;
     bool match(String s) =>
         s.toLowerCase().contains(query) || s.toLowerCase().contains(stem);
     final stores = _stores.where((s) => match(s.name)).map(_storeJson);
@@ -433,28 +483,34 @@ class MockApiClient implements ApiClient {
     if (seg[1] == 'items') {
       if (method == 'POST' && seg.length == 2) {
         final product = _products.firstWhere(
-            (p) => p.id == b['productId'],
-            orElse: () => throw _notFound('Товар не найден'),);
+          (p) => p.id == b['productId'],
+          orElse: () => throw _notFound('Товар не найден'),
+        );
         if (_cartStoreId != null && _cartStoreId != product.storeId) {
           throw const ApiException(
-              code: 'CART_DIFFERENT_STORE',
-              message: 'В корзине товары другого магазина',
-              statusCode: 409,);
+            code: 'CART_DIFFERENT_STORE',
+            message: 'В корзине товары другого магазина',
+            statusCode: 409,
+          );
         }
         _cartStoreId ??= product.storeId;
-        final idx = _cartItems.indexWhere((i) =>
-            i.product.id == product.id &&
-            i.variantId == b['variantId'],);
+        final idx = _cartItems.indexWhere(
+          (i) => i.product.id == product.id && i.variantId == b['variantId'],
+        );
         if (idx >= 0) {
-          _cartItems[idx] = _cartItems[idx]
-              .copyWith(quantity: _cartItems[idx].quantity + ((b['qty'] as num?)?.toInt() ?? 1));
+          _cartItems[idx] = _cartItems[idx].copyWith(
+            quantity:
+                _cartItems[idx].quantity + ((b['qty'] as num?)?.toInt() ?? 1),
+          );
         } else {
-          _cartItems.add(CartItem(
-            id: _id('ci'),
-            product: product,
-            quantity: (b['qty'] as num?)?.toInt() ?? 1,
-            variantId: b['variantId'] as String?,
-          ),);
+          _cartItems.add(
+            CartItem(
+              id: _id('ci'),
+              product: product,
+              quantity: (b['qty'] as num?)?.toInt() ?? 1,
+              variantId: b['variantId'] as String?,
+            ),
+          );
         }
         return _cartJson();
       }
@@ -489,12 +545,14 @@ class MockApiClient implements ApiClient {
       'storeId': store.id,
       'storeName': store.name,
       'items': _cartItems
-          .map((i) => {
-                'id': i.id,
-                'quantity': i.quantity,
-                'variantId': i.variantId,
-                'product': _productJson(i.product),
-              },)
+          .map(
+            (i) => {
+              'id': i.id,
+              'quantity': i.quantity,
+              'variantId': i.variantId,
+              'product': _productJson(i.product),
+            },
+          )
           .toList(),
       'subtotalTiyn': subtotal,
       'deliveryTiyn': delivery,
@@ -526,7 +584,10 @@ class MockApiClient implements ApiClient {
     // POST /checkout
     if (_cartItems.isEmpty) {
       throw const ApiException(
-          code: 'CART_EMPTY', message: 'Корзина пуста', statusCode: 400,);
+        code: 'CART_EMPTY',
+        message: 'Корзина пуста',
+        statusCode: 400,
+      );
     }
     final cart = _cartJson();
     final point = GeoPoint(
@@ -540,8 +601,8 @@ class MockApiClient implements ApiClient {
       final p = _promoCodes[promo]!;
       final subtotal = cart['subtotalTiyn'] as int;
       final scoped = p['productId'] as String?;
-      final scopeOk = scoped == null ||
-          _cartItems.any((i) => i.product.id == scoped);
+      final scopeOk =
+          scoped == null || _cartItems.any((i) => i.product.id == scoped);
       if (subtotal >= (p['minOrderTiyn'] as int? ?? 0) && scopeOk) {
         if (p['bogo'] == true) {
           // 2+1: every 3rd unit of scoped products is free (cheapest).
@@ -552,9 +613,7 @@ class MockApiClient implements ApiClient {
             }
           }
           units.sort();
-          discount = units
-              .take(units.length ~/ 3)
-              .fold(0, (s, v) => s + v);
+          discount = units.take(units.length ~/ 3).fold(0, (s, v) => s + v);
         } else if (p['firstOrder'] == true &&
             _orders.any((o) => o.status == OrderStatus.delivered)) {
           discount = 0; // only for the first delivered order
@@ -571,12 +630,14 @@ class MockApiClient implements ApiClient {
       storeId: cart['storeId'] as String,
       storeName: cart['storeName'] as String,
       items: _cartItems
-          .map((i) => OrderItem(
-                productId: i.product.id,
-                name: i.product.name,
-                quantity: i.quantity,
-                priceTiyn: i.priceTiyn,
-              ),)
+          .map(
+            (i) => OrderItem(
+              productId: i.product.id,
+              name: i.product.name,
+              quantity: i.quantity,
+              priceTiyn: i.priceTiyn,
+            ),
+          )
           .toList(),
       status: OrderStatus.pending,
       paymentStatus: PaymentStatus.initiated,
@@ -603,22 +664,26 @@ class MockApiClient implements ApiClient {
     // Wallet payment validates the balance BEFORE the cart is consumed.
     if (method == 'wallet' && _walletBalanceTiyn < order.totalTiyn) {
       throw const ApiException(
-          code: 'INSUFFICIENT_FUNDS',
-          message: 'Недостаточно бонусов на кошельке',
-          statusCode: 402,);
+        code: 'INSUFFICIENT_FUNDS',
+        message: 'Недостаточно бонусов на кошельке',
+        statusCode: 402,
+      );
     }
     _orders.insert(0, order);
     _cartItems.clear();
     _cartStoreId = null;
     if (method == 'wallet') {
       _walletBalanceTiyn -= order.totalTiyn;
-      _walletTxns.insert(0, {
-        'id': _id('txn'),
-        'kind': 'spend',
-        'amountTiyn': -order.totalTiyn,
-        'title': 'Оплата заказа ${order.number}',
-        'at': DateTime.now().toIso8601String(),
-      },);
+      _walletTxns.insert(
+        0,
+        {
+          'id': _id('txn'),
+          'kind': 'spend',
+          'amountTiyn': -order.totalTiyn,
+          'title': 'Оплата заказа ${order.number}',
+          'at': DateTime.now().toIso8601String(),
+        },
+      );
       final i = _orders.indexWhere((o) => o.id == order.id);
       _orders[i] = _orders[i].copyWith(paymentStatus: PaymentStatus.paid);
     }
@@ -627,13 +692,16 @@ class MockApiClient implements ApiClient {
     final cashback = order.totalTiyn ~/ 50;
     if (cashback > 0) {
       _walletBalanceTiyn += cashback;
-      _walletTxns.insert(0, {
-        'id': _id('txn'),
-        'kind': 'cashback',
-        'amountTiyn': cashback,
-        'title': 'Кэшбэк за заказ ${order.number}',
-        'at': DateTime.now().toIso8601String(),
-      },);
+      _walletTxns.insert(
+        0,
+        {
+          'id': _id('txn'),
+          'kind': 'cashback',
+          'amountTiyn': cashback,
+          'title': 'Кэшбэк за заказ ${order.number}',
+          'at': DateTime.now().toIso8601String(),
+        },
+      );
     }
     _simulateOrder(order.id, method: method);
     final payId = _id('pay');
@@ -653,8 +721,10 @@ class MockApiClient implements ApiClient {
     final orderId = _paymentIndex[pid];
     final order = orderId == null
         ? null
-        : _orders.firstWhere((o) => o.id == orderId,
-            orElse: () => throw _notFound('Платёж не найден'),);
+        : _orders.firstWhere(
+            (o) => o.id == orderId,
+            orElse: () => throw _notFound('Платёж не найден'),
+          );
     if (order == null) throw _notFound('Платёж не найден');
     return {
       'id': pid,
@@ -674,23 +744,32 @@ class MockApiClient implements ApiClient {
     OrderStatusEntry entry(OrderStatus s, UserRole role) =>
         OrderStatusEntry(status: s, actorRole: role, at: DateTime.now());
 
-    void setStatus(OrderStatus s, UserRole role,
-        {String? courierName, String? courierId, String? courierPhone,}) {
+    void setStatus(
+      OrderStatus s,
+      UserRole role, {
+      String? courierName,
+      String? courierId,
+      String? courierPhone,
+    }) {
       final i0 = _orders.indexWhere((o) => o.id == orderId);
       if (i0 < 0 ||
           _orders[i0].status == OrderStatus.cancelled ||
           _orders[i0].status == OrderStatus.delivered) {
         return; // a cancelled/delivered order no longer progresses
       }
-      mutate((o) => o.copyWith(
-            status: s,
-            courierName: courierName,
-            courierId: courierId,
-            courierPhone: courierPhone,
-            statusHistory: [...o.statusHistory, entry(s, role)],
-          ),);
-      realtime?.emit('order.status_changed',
-          {'orderId': orderId, 'status': s.name},);
+      mutate(
+        (o) => o.copyWith(
+          status: s,
+          courierName: courierName,
+          courierId: courierId,
+          courierPhone: courierPhone,
+          statusHistory: [...o.statusHistory, entry(s, role)],
+        ),
+      );
+      realtime?.emit(
+        'order.status_changed',
+        {'orderId': orderId, 'status': s.name},
+      );
     }
 
     final steps = <(Duration, String, Map<String, dynamic>)>[
@@ -705,8 +784,12 @@ class MockApiClient implements ApiClient {
       if (method != 'cash') {
         mutate((o) => o.copyWith(paymentStatus: PaymentStatus.paid));
       }
-      _pushNotif('Оплата подтверждена', 'Заказ передан в магазин',
-          kind: 'order', orderId: orderId,);
+      _pushNotif(
+        'Оплата подтверждена',
+        'Заказ передан в магазин',
+        kind: 'order',
+        orderId: orderId,
+      );
     });
     Timer(const Duration(seconds: 8), () {
       realtime?.emit('order.created', {'orderId': orderId});
@@ -719,13 +802,23 @@ class MockApiClient implements ApiClient {
       setStatus(OrderStatus.readyForPickup, UserRole.manager);
     });
     Timer(const Duration(seconds: 48), () {
-      setStatus(OrderStatus.courierAssigned, UserRole.admin,
-          courierId: 'u-courier', courierName: 'Арман',
-          courierPhone: '+77000000003',);
-      realtime?.emit('courier.assigned',
-          {'orderId': orderId, 'courierName': 'Арман'},);
-      _pushNotif('Курьер назначен', 'Арман уже забирает ваш заказ',
-          kind: 'order', orderId: orderId,);
+      setStatus(
+        OrderStatus.courierAssigned,
+        UserRole.admin,
+        courierId: 'u-courier',
+        courierName: 'Арман',
+        courierPhone: '+77000000003',
+      );
+      realtime?.emit(
+        'courier.assigned',
+        {'orderId': orderId, 'courierName': 'Арман'},
+      );
+      _pushNotif(
+        'Курьер назначен',
+        'Арман уже забирает ваш заказ',
+        kind: 'order',
+        orderId: orderId,
+      );
       _startCourierGps(orderId);
     });
     realtime?.schedule(steps);
@@ -735,8 +828,10 @@ class MockApiClient implements ApiClient {
     final i = _orders.indexWhere((o) => o.id == orderId);
     if (i < 0) return;
     final order = _orders[i];
-    final store = _stores.firstWhere((s) => s.id == order.storeId,
-        orElse: () => MockData.stores.first,);
+    final store = _stores.firstWhere(
+      (s) => s.id == order.storeId,
+      orElse: () => MockData.stores.first,
+    );
     final from = store.point ?? MockData.shymkent;
     final to = order.delivery.point;
     var tick = 0;
@@ -761,13 +856,16 @@ class MockApiClient implements ApiClient {
             statusHistory: [
               ..._orders[idx].statusHistory,
               OrderStatusEntry(
-                  status: OrderStatus.pickedUp,
-                  actorRole: UserRole.courier,
-                  at: DateTime.now(),),
+                status: OrderStatus.pickedUp,
+                actorRole: UserRole.courier,
+                at: DateTime.now(),
+              ),
             ],
           );
-          realtime?.emit('order.status_changed',
-              {'orderId': orderId, 'status': 'pickedUp'},);
+          realtime?.emit(
+            'order.status_changed',
+            {'orderId': orderId, 'status': 'pickedUp'},
+          );
         }
         if (tick == 3) {
           _orders[idx] = _orders[idx].copyWith(
@@ -775,13 +873,16 @@ class MockApiClient implements ApiClient {
             statusHistory: [
               ..._orders[idx].statusHistory,
               OrderStatusEntry(
-                  status: OrderStatus.delivering,
-                  actorRole: UserRole.courier,
-                  at: DateTime.now(),),
+                status: OrderStatus.delivering,
+                actorRole: UserRole.courier,
+                at: DateTime.now(),
+              ),
             ],
           );
-          realtime?.emit('order.status_changed',
-              {'orderId': orderId, 'status': 'delivering'},);
+          realtime?.emit(
+            'order.status_changed',
+            {'orderId': orderId, 'status': 'delivering'},
+          );
         }
       }
       realtime?.emit('courier.location_updated', {
@@ -799,17 +900,24 @@ class MockApiClient implements ApiClient {
             statusHistory: [
               ..._orders[j].statusHistory,
               OrderStatusEntry(
-                  status: OrderStatus.delivered,
-                  actorRole: UserRole.courier,
-                  at: DateTime.now(),),
+                status: OrderStatus.delivered,
+                actorRole: UserRole.courier,
+                at: DateTime.now(),
+              ),
             ],
           );
         }
-        realtime?.emit('order.status_changed',
-            {'orderId': orderId, 'status': 'delivered'},);
+        realtime?.emit(
+          'order.status_changed',
+          {'orderId': orderId, 'status': 'delivered'},
+        );
         realtime?.emit('order.delivered', {'orderId': orderId});
-        _pushNotif('Заказ доставлен', 'Приятного аппетита!',
-            kind: 'order', orderId: orderId,);
+        _pushNotif(
+          'Заказ доставлен',
+          'Приятного аппетита!',
+          kind: 'order',
+          orderId: orderId,
+        );
       }
     });
   }
@@ -820,30 +928,38 @@ class MockApiClient implements ApiClient {
     if (seg.length == 1) {
       return _wrap(_orders.map((o) => o.toJsonSafe()));
     }
-    final order = _orders.firstWhere((o) => o.id == seg[1],
-        orElse: () => throw _notFound('Заказ не найден'),);
+    final order = _orders.firstWhere(
+      (o) => o.id == seg[1],
+      orElse: () => throw _notFound('Заказ не найден'),
+    );
     if (seg.length == 2) return order.toJsonSafe();
     if (_s(seg, 2) == 'cancel' && method == 'POST') {
       if (!order.canCancel) {
         throw const ApiException(
-            code: 'CANNOT_CANCEL',
-            message: 'Заказ уже готовится — отмена недоступна',
-            statusCode: 409,);
+          code: 'CANNOT_CANCEL',
+          message: 'Заказ уже готовится — отмена недоступна',
+          statusCode: 409,
+        );
       }
       final i = _orders.indexWhere((o) => o.id == order.id);
       // Bonus payments go back to the wallet instantly.
       if (order.paymentStatus == PaymentStatus.paid &&
-          _walletTxns.any((t) =>
-              t['kind'] == 'spend' &&
-              (t['title'] as String).contains(order.number),)) {
+          _walletTxns.any(
+            (t) =>
+                t['kind'] == 'spend' &&
+                (t['title'] as String).contains(order.number),
+          )) {
         _walletBalanceTiyn += order.totalTiyn;
-        _walletTxns.insert(0, {
-          'id': _id('txn'),
-          'kind': 'refund',
-          'amountTiyn': order.totalTiyn,
-          'title': 'Возврат за заказ ${order.number}',
-          'at': DateTime.now().toIso8601String(),
-        },);
+        _walletTxns.insert(
+          0,
+          {
+            'id': _id('txn'),
+            'kind': 'refund',
+            'amountTiyn': order.totalTiyn,
+            'title': 'Возврат за заказ ${order.number}',
+            'at': DateTime.now().toIso8601String(),
+          },
+        );
       }
       _orders[i] = order.copyWith(
         status: OrderStatus.cancelled,
@@ -851,30 +967,34 @@ class MockApiClient implements ApiClient {
         statusHistory: [
           ...order.statusHistory,
           OrderStatusEntry(
-              status: OrderStatus.cancelled,
-              actorRole: UserRole.customer,
-              at: DateTime.now(),
-              reason: b['reason'] as String?,),
+            status: OrderStatus.cancelled,
+            actorRole: UserRole.customer,
+            at: DateTime.now(),
+            reason: b['reason'] as String?,
+          ),
         ],
       );
-      realtime?.emit('order.status_changed',
-          {'orderId': order.id, 'status': 'cancelled'},);
+      realtime?.emit(
+        'order.status_changed',
+        {'orderId': order.id, 'status': 'cancelled'},
+      );
       return _orders[i].toJsonSafe();
     }
     if (_s(seg, 2) == 'repeat' && method == 'POST') {
       // Re-add items at current prices; skip out-of-stock.
       var added = 0;
       for (final item in order.items) {
-        final p = _products.where((x) => x.id == item.productId)
-            .firstOrNull;
+        final p = _products.where((x) => x.id == item.productId).firstOrNull;
         if (p == null || !p.available || p.stock < item.quantity) {
           continue;
         }
-        _cartItems.add(CartItem(
-          id: _id('ci'),
-          product: p,
-          quantity: item.quantity,
-        ),);
+        _cartItems.add(
+          CartItem(
+            id: _id('ci'),
+            product: p,
+            quantity: item.quantity,
+          ),
+        );
         added++;
       }
       _cartStoreId ??= order.storeId;
@@ -884,8 +1004,10 @@ class MockApiClient implements ApiClient {
   }
 
   dynamic _tracking(List<String> seg) {
-    final order = _orders.firstWhere((o) => o.id == _s(seg, 2),
-        orElse: () => throw _notFound('Заказ не найден'),);
+    final order = _orders.firstWhere(
+      (o) => o.id == _s(seg, 2),
+      orElse: () => throw _notFound('Заказ не найден'),
+    );
     return {
       'orderId': order.id,
       'orderStatus': order.status.name,
@@ -898,14 +1020,20 @@ class MockApiClient implements ApiClient {
 
   String _roomFor(String orderId) => 'room-$orderId';
 
-  dynamic _chat(String method, List<String> seg, Map<String, dynamic> b,
-      Map<String, dynamic> q,) {
+  dynamic _chat(
+    String method,
+    List<String> seg,
+    Map<String, dynamic> b,
+    Map<String, dynamic> q,
+  ) {
     if (_s(seg, 1) == 'rooms') {
       if (seg.length == 2) {
         final orderId = q['orderId'] as String?;
         if (orderId != null) {
-          final order = _orders.firstWhere((o) => o.id == orderId,
-              orElse: () => throw _notFound('Заказ не найден'),);
+          final order = _orders.firstWhere(
+            (o) => o.id == orderId,
+            orElse: () => throw _notFound('Заказ не найден'),
+          );
           return _wrap([
             {
               'id': _roomFor(order.id),
@@ -916,12 +1044,16 @@ class MockApiClient implements ApiClient {
             }
           ]);
         }
-        return _wrap(_chatMessages.keys.map((id) => {
+        return _wrap(
+          _chatMessages.keys.map(
+            (id) => {
               'id': id,
               'orderId': id.replaceFirst('room-', ''),
               'title': 'Чат',
               'unread': 0,
-            },),);
+            },
+          ),
+        );
       }
       final roomId = seg[2];
       _chatMessages.putIfAbsent(roomId, () => []);
@@ -937,7 +1069,8 @@ class MockApiClient implements ApiClient {
       if (seg[3] == 'messages') {
         if (method == 'GET') {
           return _wrap(
-              _chatMessages[roomId]!.map((m) => _msgJson(m)),);
+            _chatMessages[roomId]!.map((m) => _msgJson(m)),
+          );
         }
         if (method == 'POST') {
           final msg = ChatMessage(
@@ -956,7 +1089,8 @@ class MockApiClient implements ApiClient {
             point: b['lat'] != null
                 ? GeoPoint(
                     lat: (b['lat'] as num).toDouble(),
-                    lng: (b['lng'] as num).toDouble(),)
+                    lng: (b['lng'] as num).toDouble(),
+                  )
                 : null,
           );
           _chatMessages[roomId]!.add(msg);
@@ -975,8 +1109,10 @@ class MockApiClient implements ApiClient {
               read: false,
             );
             _chatMessages[roomId]!.add(reply);
-            realtime?.emit('chat.message_created',
-                {'roomId': roomId, 'message': _msgJson(reply)},);
+            realtime?.emit(
+              'chat.message_created',
+              {'roomId': roomId, 'message': _msgJson(reply)},
+            );
           });
           return _msgJson(msg);
         }
@@ -997,8 +1133,7 @@ class MockApiClient implements ApiClient {
           'online' => CourierStatus.online,
           _ => CourierStatus.offline,
         };
-        if (_courierStatus == CourierStatus.online &&
-            _courierOffers.isEmpty) {
+        if (_courierStatus == CourierStatus.online && _courierOffers.isEmpty) {
           _seedCourierOffer();
         }
         return {'status': _courierStatus.name};
@@ -1009,8 +1144,7 @@ class MockApiClient implements ApiClient {
         );
         _lastCourierPoint = point;
         if (_activeCourierOrderId != null) {
-          final i =
-              _orders.indexWhere((o) => o.id == _activeCourierOrderId);
+          final i = _orders.indexWhere((o) => o.id == _activeCourierOrderId);
           if (i >= 0) {
             _orders[i] = _orders[i].copyWith(courierLocation: point);
             realtime?.emit('courier.location_updated', {
@@ -1025,9 +1159,10 @@ class MockApiClient implements ApiClient {
         if (seg.length == 2) {
           return _wrap(_courierOffers.map(_offerJson));
         }
-        final offer = _courierOffers
-            .firstWhere((o) => o.id == seg[2],
-                orElse: () => throw _notFound('Предложение не найдено'),);
+        final offer = _courierOffers.firstWhere(
+          (o) => o.id == seg[2],
+          orElse: () => throw _notFound('Предложение не найдено'),
+        );
         if (_s(seg, 3) == 'accept') {
           _courierOffers.remove(offer);
           _courierStatus = CourierStatus.delivering;
@@ -1058,13 +1193,16 @@ class MockApiClient implements ApiClient {
             statusHistory: [
               ..._orders[i].statusHistory,
               OrderStatusEntry(
-                  status: status,
-                  actorRole: UserRole.courier,
-                  at: DateTime.now(),),
+                status: status,
+                actorRole: UserRole.courier,
+                at: DateTime.now(),
+              ),
             ],
           );
-          realtime?.emit('order.status_changed',
-              {'orderId': oid, 'status': status.name},);
+          realtime?.emit(
+            'order.status_changed',
+            {'orderId': oid, 'status': status.name},
+          );
           if (status == OrderStatus.delivered) {
             _activeCourierOrderId = null;
             _courierStatus = CourierStatus.online;
@@ -1077,8 +1215,12 @@ class MockApiClient implements ApiClient {
     throw _notFound('couriers');
   }
 
-  void _pushNotif(String title, String body,
-      {String kind = 'info', String? orderId,}) {
+  void _pushNotif(
+    String title,
+    String body, {
+    String kind = 'info',
+    String? orderId,
+  }) {
     _notifications.insert(
       0,
       AppNotification(
@@ -1090,8 +1232,10 @@ class MockApiClient implements ApiClient {
         orderId: orderId,
       ),
     );
-    realtime?.emit('notification.created',
-        {'title': title, 'body': body, 'orderId': orderId},);
+    realtime?.emit(
+      'notification.created',
+      {'title': title, 'body': body, 'orderId': orderId},
+    );
   }
 
   void _seedCourierOffer() {
@@ -1101,82 +1245,92 @@ class MockApiClient implements ApiClient {
         _products.where((p) => p.storeId == store.id).take(2).toList();
     final orderId = _id('ord');
     final items = products
-        .map((p) => OrderItem(
-              productId: p.id,
-              name: p.name,
-              quantity: 1,
-              priceTiyn: p.priceTiyn,
-            ),)
+        .map(
+          (p) => OrderItem(
+            productId: p.id,
+            name: p.name,
+            quantity: 1,
+            priceTiyn: p.priceTiyn,
+          ),
+        )
         .toList();
     final subtotal = items.fold<int>(0, (s, i) => s + i.priceTiyn);
-    _orders.insert(0, Order(
-      id: orderId,
-      number: 'K-${1000 + _seq}',
-      storeId: store.id,
-      storeName: store.name,
-      items: items,
-      status: OrderStatus.readyForPickup,
-      paymentStatus: PaymentStatus.paid,
-      delivery: DeliverySnapshot(
-        address: 'Шымкент, ул. Желтоксан 45',
-        point: MockData.shymkent,
-        capturedAt: DateTime.now(),
-      ),
-      subtotalTiyn: subtotal,
-      discountTiyn: 0,
-      deliveryTiyn: store.deliveryFeeTiyn,
-      totalTiyn: subtotal + store.deliveryFeeTiyn,
-      createdAt: DateTime.now(),
-      statusHistory: [
-        OrderStatusEntry(
+    _orders.insert(
+      0,
+      Order(
+        id: orderId,
+        number: 'K-${1000 + _seq}',
+        storeId: store.id,
+        storeName: store.name,
+        items: items,
+        status: OrderStatus.readyForPickup,
+        paymentStatus: PaymentStatus.paid,
+        delivery: DeliverySnapshot(
+          address: 'Шымкент, ул. Желтоксан 45',
+          point: MockData.shymkent,
+          capturedAt: DateTime.now(),
+        ),
+        subtotalTiyn: subtotal,
+        discountTiyn: 0,
+        deliveryTiyn: store.deliveryFeeTiyn,
+        totalTiyn: subtotal + store.deliveryFeeTiyn,
+        createdAt: DateTime.now(),
+        statusHistory: [
+          OrderStatusEntry(
             status: OrderStatus.readyForPickup,
             actorRole: UserRole.manager,
-            at: DateTime.now(),),
-      ],
-    ),);
-    _courierOffers.add(CourierOffer(
-      id: _id('off'),
-      orderId: orderId,
-      orderNumber: _orders.first.number,
-      storeName: store.name,
-      pickupAddress: store.address,
-      pickup: store.point ?? MockData.shymkent,
-      dropoffAddress: 'Шымкент, ул. Желтоксан 45',
-      dropoff: MockData.shymkent,
-      feeTiyn: 89000,
-      distanceKm: 4.2,
-      expiresAt: DateTime.now().add(const Duration(seconds: 60)),
-    ),);
+            at: DateTime.now(),
+          ),
+        ],
+      ),
+    );
+    _courierOffers.add(
+      CourierOffer(
+        id: _id('off'),
+        orderId: orderId,
+        orderNumber: _orders.first.number,
+        storeName: store.name,
+        pickupAddress: store.address,
+        pickup: store.point ?? MockData.shymkent,
+        dropoffAddress: 'Шымкент, ул. Желтоксан 45',
+        dropoff: MockData.shymkent,
+        feeTiyn: 89000,
+        distanceKm: 4.2,
+        expiresAt: DateTime.now().add(const Duration(seconds: 60)),
+      ),
+    );
   }
 
   // -- manager / admin ----------------------------------------------------------
 
-  dynamic _manager(String method, List<String> seg, Map<String, dynamic> b,
-      Map<String, dynamic> q,) {
+  dynamic _manager(
+    String method,
+    List<String> seg,
+    Map<String, dynamic> b,
+    Map<String, dynamic> q,
+  ) {
     switch (_s(seg, 1)) {
       case 'dashboard':
         return {
-          'newOrders': _orders
-              .where((o) => o.status == OrderStatus.pending)
-              .length,
-          'preparing': _orders
-              .where((o) => o.status == OrderStatus.preparing)
-              .length,
+          'newOrders':
+              _orders.where((o) => o.status == OrderStatus.pending).length,
+          'preparing':
+              _orders.where((o) => o.status == OrderStatus.preparing).length,
           'ready': _orders
               .where((o) => o.status == OrderStatus.readyForPickup)
               .length,
-          'deliveredToday': _orders
-              .where((o) => o.status == OrderStatus.delivered)
-              .length,
-          'cancelledToday': _orders
-              .where((o) => o.status == OrderStatus.cancelled)
-              .length,
+          'deliveredToday':
+              _orders.where((o) => o.status == OrderStatus.delivered).length,
+          'cancelledToday':
+              _orders.where((o) => o.status == OrderStatus.cancelled).length,
           'salesTodayTiyn': _orders.fold<int>(0, (s, o) => s + o.totalTiyn),
         };
       case 'orders':
         if (seg.length == 2) return _wrap(_orders.map((o) => o.toJsonSafe()));
-        final order = _orders.firstWhere((o) => o.id == seg[2],
-            orElse: () => throw _notFound('Заказ не найден'),);
+        final order = _orders.firstWhere(
+          (o) => o.id == seg[2],
+          orElse: () => throw _notFound('Заказ не найден'),
+        );
         final action = _s(seg, 3);
         final next = switch (action) {
           'accept' => OrderStatus.accepted,
@@ -1191,21 +1345,26 @@ class MockApiClient implements ApiClient {
           statusHistory: [
             ...order.statusHistory,
             OrderStatusEntry(
-                status: next,
-                actorRole: UserRole.manager,
-                at: DateTime.now(),),
+              status: next,
+              actorRole: UserRole.manager,
+              at: DateTime.now(),
+            ),
           ],
         );
-        _audit.add(AuditEntry(
-          id: _id('aud'),
-          actor: _user?.name ?? 'manager',
-          role: UserRole.manager,
-          action: 'order_$action',
-          resource: order.id,
-          at: DateTime.now(),
-        ),);
-        realtime?.emit('order.status_changed',
-            {'orderId': order.id, 'status': next.name},);
+        _audit.add(
+          AuditEntry(
+            id: _id('aud'),
+            actor: _user?.name ?? 'manager',
+            role: UserRole.manager,
+            action: 'order_$action',
+            resource: order.id,
+            at: DateTime.now(),
+          ),
+        );
+        realtime?.emit(
+          'order.status_changed',
+          {'orderId': order.id, 'status': next.name},
+        );
         return _orders[i].toJsonSafe();
       case 'products':
         if (method == 'GET') {
@@ -1213,12 +1372,15 @@ class MockApiClient implements ApiClient {
         }
         if (method == 'POST') {
           final p = Product(
-            id: _id('p'),
-            storeId: b['storeId'] as String? ?? 'st-handam',
+            id: b['id'] as String? ?? _id('p'),
+            storeId: b['storeId'] as String? ?? 'kora-market',
             name: b['name'] as String? ?? 'Новый товар',
             description: b['description'] as String? ?? '',
             priceTiyn: (b['priceTiyn'] as num?)?.toInt() ?? 0,
+            oldPriceTiyn: (b['oldPriceTiyn'] as num?)?.toInt(),
             stock: (b['stock'] as num?)?.toInt() ?? 0,
+            imageUrl: b['imageUrl'] as String?,
+            categoryId: b['categoryId'] as String?,
           );
           _products.add(p);
           return _productJson(p);
@@ -1232,22 +1394,28 @@ class MockApiClient implements ApiClient {
             storeId: old.storeId,
             name: b['name'] as String? ?? old.name,
             description: b['description'] as String? ?? old.description,
-            imageUrl: old.imageUrl,
-            priceTiyn:
-                (b['priceTiyn'] as num?)?.toInt() ?? old.priceTiyn,
+            imageUrl: b.containsKey('imageUrl')
+                ? b['imageUrl'] as String?
+                : old.imageUrl,
+            categoryId: b.containsKey('categoryId')
+                ? b['categoryId'] as String?
+                : old.categoryId,
+            priceTiyn: (b['priceTiyn'] as num?)?.toInt() ?? old.priceTiyn,
             oldPriceTiyn:
                 (b['oldPriceTiyn'] as num?)?.toInt() ?? old.oldPriceTiyn,
             stock: (b['stock'] as num?)?.toInt() ?? old.stock,
             available: b['available'] as bool? ?? old.available,
           );
-          _audit.add(AuditEntry(
-            id: _id('aud'),
-            actor: _user?.name ?? 'manager',
-            role: UserRole.manager,
-            action: 'price_changed',
-            resource: old.id,
-            at: DateTime.now(),
-          ),);
+          _audit.add(
+            AuditEntry(
+              id: _id('aud'),
+              actor: _user?.name ?? 'manager',
+              role: UserRole.manager,
+              action: 'price_changed',
+              resource: old.id,
+              at: DateTime.now(),
+            ),
+          );
           return _productJson(_products[i]);
         }
         break;
@@ -1268,7 +1436,7 @@ class MockApiClient implements ApiClient {
         ]);
       case 'schedule':
         // GET/PUT /manager/schedule — working hours for own store.
-        final storeId = b['storeId'] as String? ?? 'st-handam';
+        final storeId = b['storeId'] as String? ?? 'kora-market';
         if (method == 'PUT') {
           final days = <int, ({int open, int close})?>{};
           (b['days'] as Map?)?.forEach((k, v) {
@@ -1299,31 +1467,39 @@ class MockApiClient implements ApiClient {
       case 'map':
         return {
           'stores': _stores
-              .map((s) => {
-                    'id': s.id,
-                    'name': s.name,
-                    'lat': s.point?.lat,
-                    'lng': s.point?.lng,
-                  },)
+              .map(
+                (s) => {
+                  'id': s.id,
+                  'name': s.name,
+                  'lat': s.point?.lat,
+                  'lng': s.point?.lng,
+                },
+              )
               .toList(),
           'couriers': const [
             {'id': 'u-courier', 'lat': 42.345, 'lng': 69.585},
           ],
           'orders': _orders
-              .map((o) => {
-                    'id': o.id,
-                    'status': o.status.name,
-                    'lat': o.delivery.point.lat,
-                    'lng': o.delivery.point.lng,
-                  },)
+              .map(
+                (o) => {
+                  'id': o.id,
+                  'status': o.status.name,
+                  'lat': o.delivery.point.lat,
+                  'lng': o.delivery.point.lng,
+                },
+              )
               .toList(),
         };
     }
     throw _notFound('manager');
   }
 
-  dynamic _admin(String method, List<String> seg, Map<String, dynamic> b,
-      Map<String, dynamic> q,) {
+  dynamic _admin(
+    String method,
+    List<String> seg,
+    Map<String, dynamic> b,
+    Map<String, dynamic> q,
+  ) {
     switch (_s(seg, 1)) {
       case 'users':
         if (seg.length == 4 && _s(seg, 3) == 'block' && method == 'POST') {
@@ -1334,37 +1510,49 @@ class MockApiClient implements ApiClient {
           } else {
             _blockedUserIds.remove(uid);
           }
-          _audit.add(AuditEntry(
-            id: _id('aud'),
-            actor: _user?.name ?? 'admin',
-            role: UserRole.admin,
-            action: blocked ? 'user_blocked' : 'user_unblocked',
-            resource: uid,
-            at: DateTime.now(),
-          ),);
+          _audit.add(
+            AuditEntry(
+              id: _id('aud'),
+              actor: _user?.name ?? 'admin',
+              role: UserRole.admin,
+              action: blocked ? 'user_blocked' : 'user_unblocked',
+              resource: uid,
+              at: DateTime.now(),
+            ),
+          );
           return {'id': uid, 'blocked': blocked};
         }
         final all = [
           if (_user != null) _user!,
           ..._users,
         ];
-        return _wrap(all.map((u) => {
+        return _wrap(
+          all.map(
+            (u) => {
               ...u.toJson(),
               'blocked': u.blocked || _blockedUserIds.contains(u.id),
-            },),);
+            },
+          ),
+        );
       case 'stores':
         return _wrap(_stores.map(_storeJson));
       case 'orders':
         return _wrap(_orders.map((o) => o.toJsonSafe()));
       case 'payments':
-        return _wrap(_orders.map((o) => {
+        return _wrap(
+          _orders.map(
+            (o) => {
               'id': 'pay-${o.id}',
               'orderId': o.id,
               'status': o.paymentStatus.name,
               'amountTiyn': o.totalTiyn,
-            },),);
+            },
+          ),
+        );
       case 'audit-logs':
-        return _wrap(_audit.map((a) => {
+        return _wrap(
+          _audit.map(
+            (a) => {
               'id': a.id,
               'actor': a.actor,
               'role': a.role.name,
@@ -1372,7 +1560,9 @@ class MockApiClient implements ApiClient {
               'resource': a.resource,
               'at': a.at.toIso8601String(),
               'result': a.result,
-            },),);
+            },
+          ),
+        );
       case 'support':
         return _wrap(_tickets.map(_ticketJson));
       case 'products':
@@ -1381,25 +1571,28 @@ class MockApiClient implements ApiClient {
         }
         if (method == 'POST') {
           final p = Product(
-            id: _id('p'),
+            id: b['id'] as String? ?? _id('p'),
             storeId: b['storeId'] as String? ?? _stores.first.id,
             name: b['name'] as String? ?? 'Новый товар',
             description: b['description'] as String? ?? '',
             imageUrl: b['imageUrl'] as String?,
+            categoryId: b['categoryId'] as String?,
             priceTiyn: (b['priceTiyn'] as num?)?.toInt() ?? 0,
             oldPriceTiyn: (b['oldPriceTiyn'] as num?)?.toInt(),
             stock: (b['stock'] as num?)?.toInt() ?? 0,
             available: b['available'] as bool? ?? true,
           );
           _products.add(p);
-          _audit.add(AuditEntry(
-            id: _id('aud'),
-            actor: _user?.name ?? 'admin',
-            role: UserRole.admin,
-            action: 'product_created',
-            resource: p.id,
-            at: DateTime.now(),
-          ),);
+          _audit.add(
+            AuditEntry(
+              id: _id('aud'),
+              actor: _user?.name ?? 'admin',
+              role: UserRole.admin,
+              action: 'product_created',
+              resource: p.id,
+              at: DateTime.now(),
+            ),
+          );
           return _productJson(p);
         }
         if (seg.length == 3 && method == 'PATCH') {
@@ -1414,30 +1607,32 @@ class MockApiClient implements ApiClient {
             imageUrl: b.containsKey('imageUrl')
                 ? b['imageUrl'] as String?
                 : old.imageUrl,
-            priceTiyn:
-                (b['priceTiyn'] as num?)?.toInt() ?? old.priceTiyn,
+            priceTiyn: (b['priceTiyn'] as num?)?.toInt() ?? old.priceTiyn,
             oldPriceTiyn: b.containsKey('oldPriceTiyn')
                 ? (b['oldPriceTiyn'] as num?)?.toInt()
                 : old.oldPriceTiyn,
             stock: (b['stock'] as num?)?.toInt() ?? old.stock,
             available: b['available'] as bool? ?? old.available,
             sku: old.sku,
-            categoryId: old.categoryId,
+            categoryId: b.containsKey('categoryId')
+                ? b['categoryId'] as String?
+                : old.categoryId,
             unit: old.unit,
             variants: old.variants,
             characteristics: old.characteristics,
           );
-          _audit.add(AuditEntry(
-            id: _id('aud'),
-            actor: _user?.name ?? 'admin',
-            role: UserRole.admin,
-            action: 'product_updated',
-            resource: old.id,
-            at: DateTime.now(),
-          ),);
+          _audit.add(
+            AuditEntry(
+              id: _id('aud'),
+              actor: _user?.name ?? 'admin',
+              role: UserRole.admin,
+              action: 'product_updated',
+              resource: old.id,
+              at: DateTime.now(),
+            ),
+          );
           // Price-drop: favorited product got cheaper → notify.
-          final newPrice =
-              (b['priceTiyn'] as num?)?.toInt() ?? old.priceTiyn;
+          final newPrice = (b['priceTiyn'] as num?)?.toInt() ?? old.priceTiyn;
           if (newPrice < old.priceTiyn &&
               _favoriteProductIds.contains(old.id)) {
             _pushNotif(
@@ -1455,14 +1650,17 @@ class MockApiClient implements ApiClient {
         break;
       case 'promo-codes':
         if (method == 'GET') {
-          return _wrap(_promoCodes.entries.map((e) => {
+          return _wrap(
+            _promoCodes.entries.map(
+              (e) => {
                 'code': e.key,
                 ...e.value,
-              },),);
+              },
+            ),
+          );
         }
         if (method == 'POST') {
-          final code =
-              (b['code'] as String? ?? '').trim().toUpperCase();
+          final code = (b['code'] as String? ?? '').trim().toUpperCase();
           if (code.isEmpty) {
             throw const ApiException(
               code: 'INVALID_CODE',
@@ -1475,10 +1673,8 @@ class MockApiClient implements ApiClient {
               'discountTiyn': (b['discountTiyn'] as num).toInt(),
             if ((b['percent'] as num?) != null)
               'percent': (b['percent'] as num).toInt(),
-            'minOrderTiyn':
-                (b['minOrderTiyn'] as num?)?.toInt() ?? 0,
-            if (b['productId'] != null)
-              'productId': b['productId'] as String,
+            'minOrderTiyn': (b['minOrderTiyn'] as num?)?.toInt() ?? 0,
+            if (b['productId'] != null) 'productId': b['productId'] as String,
             if (b['bogo'] == true) 'bogo': true,
             if (b['firstOrder'] == true) 'firstOrder': true,
           };
@@ -1501,8 +1697,7 @@ class MockApiClient implements ApiClient {
             imageUrl: b['imageUrl'] as String?,
             storeId: b['storeId'] as String?,
             code: b['code'] as String?,
-            discountPercent:
-                (b['discountPercent'] as num?)?.toInt(),
+            discountPercent: (b['discountPercent'] as num?)?.toInt(),
           );
           _promotions.insert(0, p);
           return _promoJson(p);
@@ -1520,14 +1715,19 @@ class MockApiClient implements ApiClient {
 
   dynamic _support(String method, List<String> seg, Map<String, dynamic> b) {
     if (_s(seg, 1) == 'faq') {
-      return _wrap(MockData.faq
-          .map((f) => {'question': f.question, 'answer': f.answer}),);
+      return _wrap(
+        MockData.faq.map((f) => {'question': f.question, 'answer': f.answer}),
+      );
     }
     if (_s(seg, 1) == 'tickets') {
       if (method == 'GET') {
         if (seg.length == 2) return _wrap(_tickets.map(_ticketJson));
-        return _ticketJson(_tickets.firstWhere((t) => t.id == seg[2],
-            orElse: () => throw _notFound('Обращение не найдено'),),);
+        return _ticketJson(
+          _tickets.firstWhere(
+            (t) => t.id == seg[2],
+            orElse: () => throw _notFound('Обращение не найдено'),
+          ),
+        );
       }
       if (method == 'POST' && seg.length == 2) {
         final text = b['message'] as String? ?? '';
@@ -1601,8 +1801,10 @@ class MockApiClient implements ApiClient {
           ),
         ],
       );
-      realtime?.emit('support.message',
-          {'ticketId': ticketId, 'status': 'inProgress'},);
+      realtime?.emit(
+        'support.message',
+        {'ticketId': ticketId, 'status': 'inProgress'},
+      );
     });
   }
 
@@ -1615,8 +1817,7 @@ class MockApiClient implements ApiClient {
     if (_s(seg, 1) == 'read') {
       for (var i = 0; i < _notifications.length; i++) {
         final n = _notifications[i];
-        if (!n.read &&
-            (b['id'] == null || b['id'] == n.id)) {
+        if (!n.read && (b['id'] == null || b['id'] == n.id)) {
           _notifications[i] = AppNotification(
             id: n.id,
             title: n.title,
@@ -1630,7 +1831,9 @@ class MockApiClient implements ApiClient {
       }
       return {'ok': true};
     }
-    return _wrap(_notifications.map((n) => {
+    return _wrap(
+      _notifications.map(
+        (n) => {
           'id': n.id,
           'title': n.title,
           'body': n.body,
@@ -1638,7 +1841,9 @@ class MockApiClient implements ApiClient {
           'at': n.at.toIso8601String(),
           'read': n.read,
           'orderId': n.orderId,
-        },),);
+        },
+      ),
+    );
   }
 
   Map<String, dynamic> _validatePromo(Map<String, dynamic> b) {
@@ -1674,8 +1879,7 @@ class MockApiClient implements ApiClient {
         }
       }
       units.sort();
-      discountTiyn =
-          units.take(units.length ~/ 3).fold(0, (s, v) => s + v);
+      discountTiyn = units.take(units.length ~/ 3).fold(0, (s, v) => s + v);
       if (discountTiyn == 0) {
         return {
           'valid': false,
@@ -1752,11 +1956,13 @@ class MockApiClient implements ApiClient {
         'available': p.available && p.stock > 0,
         'stock': p.stock,
         'variants': p.variants
-            .map((v) => {
-                  'id': v.id,
-                  'name': v.name,
-                  'priceTiyn': v.priceTiyn,
-                },)
+            .map(
+              (v) => {
+                'id': v.id,
+                'name': v.name,
+                'priceTiyn': v.priceTiyn,
+              },
+            )
             .toList(),
         'characteristics': p.characteristics,
       };
@@ -1804,29 +2010,41 @@ class MockApiClient implements ApiClient {
         'status': t.status.name,
         'createdAt': t.createdAt.toIso8601String(),
         'messages': t.messages
-            .map((m) => {
-                  'id': m.id,
-                  'senderId': m.senderId,
-                  'text': m.text,
-                  'type': m.type.name,
-                  'at': m.at.toIso8601String(),
-                },)
+            .map(
+              (m) => {
+                'id': m.id,
+                'senderId': m.senderId,
+                'text': m.text,
+                'type': m.type.name,
+                'at': m.at.toIso8601String(),
+              },
+            )
             .toList(),
       };
 
   ApiException _notFound(String what) => ApiException(
-      code: 'NOT_FOUND', message: what, statusCode: 404,);
+        code: 'NOT_FOUND',
+        message: what,
+        statusCode: 404,
+      );
 
   // -- ApiClient interface -------------------------------------------------------
 
   @override
-  Future<dynamic> get(String path,
-          {Map<String, dynamic>? query, bool auth = true,}) =>
+  Future<dynamic> get(
+    String path, {
+    Map<String, dynamic>? query,
+    bool auth = true,
+  }) =>
       _handle('GET', path, query: query, auth: auth);
 
   @override
-  Future<dynamic> post(String path,
-          {Object? body, Map<String, dynamic>? query, bool auth = true,}) =>
+  Future<dynamic> post(
+    String path, {
+    Object? body,
+    Map<String, dynamic>? query,
+    bool auth = true,
+  }) =>
       _handle('POST', path, body: body, query: query, auth: auth);
 
   @override
@@ -1850,12 +2068,14 @@ extension OrderJson on Order {
         'storeId': storeId,
         'storeName': storeName,
         'items': items
-            .map((i) => {
-                  'productId': i.productId,
-                  'name': i.name,
-                  'quantity': i.quantity,
-                  'priceTiyn': i.priceTiyn,
-                },)
+            .map(
+              (i) => {
+                'productId': i.productId,
+                'name': i.name,
+                'quantity': i.quantity,
+                'priceTiyn': i.priceTiyn,
+              },
+            )
             .toList(),
         'status': status.name,
         'paymentStatus': paymentStatus.name,
@@ -1872,12 +2092,14 @@ extension OrderJson on Order {
         'totalTiyn': totalTiyn,
         'createdAt': createdAt.toIso8601String(),
         'statusHistory': statusHistory
-            .map((h) => {
-                  'newStatus': h.status.name,
-                  'actorRole': h.actorRole.name,
-                  'createdAt': h.at.toIso8601String(),
-                  'reason': h.reason,
-                },)
+            .map(
+              (h) => {
+                'newStatus': h.status.name,
+                'actorRole': h.actorRole.name,
+                'createdAt': h.at.toIso8601String(),
+                'reason': h.reason,
+              },
+            )
             .toList(),
         'promoCode': promoCode,
         'courierId': courierId,

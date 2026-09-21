@@ -15,6 +15,7 @@ import '../../../core/widgets/cards.dart';
 import '../../../core/widgets/feedback.dart';
 import '../../../core/widgets/fields.dart';
 import '../../../core/widgets/misc.dart';
+import '../../catalog/data/catalog_repository.dart';
 import '../../manager/presentation/manager_tools.dart';
 
 class AdminRepository {
@@ -23,8 +24,8 @@ class AdminRepository {
   final Ref _ref;
 
   Future<List<Map<String, dynamic>>> _list(String path) async {
-    final res = await _ref.read(apiClientProvider).get(path)
-        as Map<String, dynamic>;
+    final res =
+        await _ref.read(apiClientProvider).get(path) as Map<String, dynamic>;
     return (res['items'] as List).cast<Map<String, dynamic>>();
   }
 
@@ -46,8 +47,10 @@ class AdminRepository {
   Future<List<Product>> products() async =>
       (await _list('/admin/products')).map(Product.fromJson).toList();
 
-  Future<Product> saveProduct(Product? existing,
-      Map<String, dynamic> body,) async {
+  Future<Product> saveProduct(
+    Product? existing,
+    Map<String, dynamic> body,
+  ) async {
     final api = _ref.read(apiClientProvider);
     final res = existing == null
         ? await api.post('/admin/products', body: body)
@@ -128,8 +131,9 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       AdminCatalogTab(key: ValueKey('cat-$_refresh'), repo: repo),
       AdminPromoTab(key: ValueKey('promo-$_refresh'), repo: repo),
       AdminPromoCodeTab(
-          key: ValueKey('code-$_refresh'), repo: repo,),
-      
+        key: ValueKey('code-$_refresh'),
+        repo: repo,
+      ),
       _DataTab<User>(
         loader: repo.users,
         itemBuilder: (u) => KoraCard(
@@ -140,29 +144,28 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
           child: Row(
             children: [
               KoraAvatar(
-                initials: u.name.isEmpty
-                    ? '?'
-                    : u.name.substring(0, 1).toUpperCase(),
+                initials:
+                    u.name.isEmpty ? '?' : u.name.substring(0, 1).toUpperCase(),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(u.name.isEmpty ? u.phone : u.name,
-                        style: AppTypography.label,),
-                    Text('${u.phone} · ${u.role.name}',
-                        style: AppTypography.caption,),
+                    Text(
+                      u.name.isEmpty ? u.phone : u.name,
+                      style: AppTypography.label,
+                    ),
+                    Text(
+                      '${u.phone} · ${u.role.name}',
+                      style: AppTypography.caption,
+                    ),
                   ],
                 ),
               ),
               KoraStatusChip(
-                label: u.blocked
-                    ? S.t('admin.blocked')
-                    : S.t('admin.active'),
-                tone: u.blocked
-                    ? KoraStatusTone.error
-                    : KoraStatusTone.success,
+                label: u.blocked ? S.t('admin.blocked') : S.t('admin.active'),
+                tone: u.blocked ? KoraStatusTone.error : KoraStatusTone.success,
               ),
             ],
           ),
@@ -177,8 +180,10 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('№ ${o.number} · ${o.storeName}',
-                        style: AppTypography.label,),
+                    Text(
+                      '№ ${o.number} · ${o.storeName}',
+                      style: AppTypography.label,
+                    ),
                     Text(
                       '${orderStatusLabel(o.status)} · '
                       '${paymentStatusLabel(o.paymentStatus)}',
@@ -203,11 +208,18 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${p['id']}', style: AppTypography.label,
-                        maxLines: 1, overflow: TextOverflow.ellipsis,),
                     Text(
-                        '${S.t('admin.order_of', {'id': '${p['orderId']}'})} · ${p['status']}',
-                        style: AppTypography.caption,),
+                      '${p['id']}',
+                      style: AppTypography.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      '${S.t('admin.order_of', {
+                            'id': '${p['orderId']}',
+                          })} · ${p['status']}',
+                      style: AppTypography.caption,
+                    ),
                   ],
                 ),
               ),
@@ -274,8 +286,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                   1 => S.t('admin.promo_new'),
                   _ => S.t('admin.promocode_new'),
                 },
-                style: AppTypography.button
-                    .copyWith(color: KoraColors.white),
+                style: AppTypography.button.copyWith(color: KoraColors.white),
               ),
               backgroundColor: KoraColors.primary,
             ),
@@ -287,26 +298,33 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
         unselectedFontSize: 10,
         items: [
           BottomNavigationBarItem(
-              icon: const Icon(AppIcons.inventory),
-              label: S.t('admin.catalog'),),
+            icon: const Icon(AppIcons.inventory),
+            label: S.t('admin.catalog'),
+          ),
           BottomNavigationBarItem(
-              icon: const Icon(AppIcons.gift),
-              label: S.t('admin.promos'),),
+            icon: const Icon(AppIcons.gift),
+            label: S.t('admin.promos'),
+          ),
           BottomNavigationBarItem(
-              icon: const Icon(AppIcons.promo),
-              label: S.t('admin.promocodes'),),
+            icon: const Icon(AppIcons.promo),
+            label: S.t('admin.promocodes'),
+          ),
           BottomNavigationBarItem(
-              icon: const Icon(AppIcons.orders),
-              label: S.t('admin.orders'),),
+            icon: const Icon(AppIcons.orders),
+            label: S.t('admin.orders'),
+          ),
           BottomNavigationBarItem(
-              icon: const Icon(AppIcons.people),
-              label: S.t('admin.users'),),
+            icon: const Icon(AppIcons.people),
+            label: S.t('admin.users'),
+          ),
           BottomNavigationBarItem(
-              icon: const Icon(AppIcons.wallet),
-              label: S.t('admin.payments'),),
+            icon: const Icon(AppIcons.wallet),
+            label: S.t('admin.payments'),
+          ),
           BottomNavigationBarItem(
-              icon: const Icon(AppIcons.security),
-              label: S.t('admin.audit'),),
+            icon: const Icon(AppIcons.security),
+            label: S.t('admin.audit'),
+          ),
         ],
       ),
     );
@@ -330,20 +348,20 @@ class _DataTab<T> extends StatelessWidget {
         if (!snap.hasData) return const KoraLoadingState();
         if (snap.data!.isEmpty) {
           return KoraEmptyState(
-              icon: AppIcons.info, title: S.t('admin.empty'),);
+            icon: AppIcons.info,
+            title: S.t('admin.empty'),
+          );
         }
         return ListView.separated(
           padding: const EdgeInsets.all(AppSpacing.lg),
           itemCount: snap.data!.length,
-          separatorBuilder: (_, __) =>
-              const SizedBox(height: AppSpacing.sm),
+          separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
           itemBuilder: (_, i) => itemBuilder(snap.data![i]),
         );
       },
     );
   }
 }
-
 
 // ---------------------------------------------------------------------------
 // Catalog tab — every product across all stores, create/edit/delete.
@@ -415,16 +433,16 @@ class _AdminCatalogTabState extends State<AdminCatalogTab> {
         return ListView.separated(
           padding: const EdgeInsets.all(AppSpacing.lg),
           itemCount: products.length,
-          separatorBuilder: (_, __) =>
-              const SizedBox(height: AppSpacing.sm),
+          separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
           itemBuilder: (_, i) {
             final p = products[i];
             return KoraCard(
               onTap: () async {
-                final saved =
-                    await AdminProductEditor.show(
-                        context, widget.repo,
-                        existing: p,);
+                final saved = await AdminProductEditor.show(
+                  context,
+                  widget.repo,
+                  existing: p,
+                );
                 if (saved && context.mounted) {
                   setState(() => _future = _load());
                 }
@@ -437,13 +455,17 @@ class _AdminCatalogTabState extends State<AdminCatalogTab> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(p.name,
-                            style: AppTypography.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,),
+                        Text(
+                          p.name,
+                          style: AppTypography.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         Text(
                           '${storeNames[p.storeId] ?? p.storeId} · '
-                          '${S.t('manager.stock_line', {'count': '${p.stock}'})}',
+                          '${S.t('manager.stock_line', {
+                                'count': '${p.stock}',
+                              })}',
                           style: AppTypography.caption,
                         ),
                       ],
@@ -453,7 +475,9 @@ class _AdminCatalogTabState extends State<AdminCatalogTab> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       KoraPrice(
-                          tiyn: p.priceTiyn, style: AppTypography.label,),
+                        tiyn: p.priceTiyn,
+                        style: AppTypography.label,
+                      ),
                       if (p.oldPriceTiyn != null)
                         Text(
                           KoraPrice.format(p.oldPriceTiyn!),
@@ -465,8 +489,11 @@ class _AdminCatalogTabState extends State<AdminCatalogTab> {
                     ],
                   ),
                   IconButton(
-                    icon: Icon(AppIcons.delete,
-                        color: KoraColors.placeholderC, size: 20,),
+                    icon: Icon(
+                      AppIcons.delete,
+                      color: KoraColors.placeholderC,
+                      size: 20,
+                    ),
                     onPressed: () => _delete(p),
                   ),
                 ],
@@ -495,8 +522,11 @@ class _ProductThumb extends StatelessWidget {
         color: KoraColors.surfaceAlt,
         child: isFile
             ? koraLocalImage(url!.substring(7))
-            : const Icon(AppIcons.inventory,
-                color: KoraColors.softPurple, size: 22,),
+            : const Icon(
+                AppIcons.inventory,
+                color: KoraColors.softPurple,
+                size: 22,
+              ),
       ),
     );
   }
@@ -506,16 +536,22 @@ class _ProductThumb extends StatelessWidget {
 // Product editor — photo + name + price in ₸ + stock → catalog card.
 // ---------------------------------------------------------------------------
 
-class AdminProductEditor extends StatefulWidget {
-  const AdminProductEditor(
-      {super.key, required this.repo, this.existing,});
+class AdminProductEditor extends ConsumerStatefulWidget {
+  const AdminProductEditor({
+    super.key,
+    required this.repo,
+    this.existing,
+  });
 
   final AdminRepository repo;
   final Product? existing;
 
   /// Returns true when a product was saved.
-  static Future<bool> show(BuildContext context, AdminRepository repo,
-      {Product? existing,}) async {
+  static Future<bool> show(
+    BuildContext context,
+    AdminRepository repo, {
+    Product? existing,
+  }) async {
     final res = await KoraBottomSheet.show<bool>(
       context,
       child: AdminProductEditor(repo: repo, existing: existing),
@@ -524,17 +560,14 @@ class AdminProductEditor extends StatefulWidget {
   }
 
   @override
-  State<AdminProductEditor> createState() => _AdminProductEditorState();
+  ConsumerState<AdminProductEditor> createState() => _AdminProductEditorState();
 }
 
-class _AdminProductEditorState extends State<AdminProductEditor> {
+class _AdminProductEditorState extends ConsumerState<AdminProductEditor> {
   late final _name = TextEditingController(text: widget.existing?.name);
-  late final _desc =
-      TextEditingController(text: widget.existing?.description);
+  late final _desc = TextEditingController(text: widget.existing?.description);
   late final _price = TextEditingController(
-    text: widget.existing == null
-        ? ''
-        : '${widget.existing!.priceTiyn ~/ 100}',
+    text: widget.existing == null ? '' : '${widget.existing!.priceTiyn ~/ 100}',
   );
   late final _oldPrice = TextEditingController(
     text: widget.existing?.oldPriceTiyn == null
@@ -545,6 +578,7 @@ class _AdminProductEditorState extends State<AdminProductEditor> {
     text: '${widget.existing?.stock ?? 0}',
   );
   String? _storeId;
+  String? _categoryId;
   String? _imagePath;
   bool _available = true;
   bool _saving = false;
@@ -553,6 +587,7 @@ class _AdminProductEditorState extends State<AdminProductEditor> {
   void initState() {
     super.initState();
     _storeId = widget.existing?.storeId;
+    _categoryId = widget.existing?.categoryId;
     _available = widget.existing?.available ?? true;
     _imagePath = widget.existing?.imageUrl;
   }
@@ -586,6 +621,7 @@ class _AdminProductEditorState extends State<AdminProductEditor> {
             : null,
         'stock': int.tryParse(_stock.text.trim()) ?? 0,
         'available': _available,
+        'categoryId': _categoryId,
       });
       if (mounted) {
         KoraSnackbar.show(context, S.t('admin.product_saved'));
@@ -628,19 +664,22 @@ class _AdminProductEditorState extends State<AdminProductEditor> {
                       decoration: BoxDecoration(
                         color: KoraColors.surfaceAlt,
                         border: Border.all(color: KoraColors.softBorderC),
-                        borderRadius:
-                            BorderRadius.circular(AppRadius.md),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                       child: _imagePath == null
                           ? Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(AppIcons.camera,
-                                    color: KoraColors.softPurple,
-                                    size: 32,),
+                                const Icon(
+                                  AppIcons.camera,
+                                  color: KoraColors.softPurple,
+                                  size: 32,
+                                ),
                                 const SizedBox(height: AppSpacing.xs),
-                                Text(S.t('admin.photo_add'),
-                                    style: AppTypography.caption,),
+                                Text(
+                                  S.t('admin.photo_add'),
+                                  style: AppTypography.caption,
+                                ),
                               ],
                             )
                           : koraLocalImage(
@@ -660,8 +699,7 @@ class _AdminProductEditorState extends State<AdminProductEditor> {
                         label: S.t('editor.open'),
                         icon: AppIcons.tune,
                         onPressed: () async {
-                          final p = await ProductImageEditor
-                              .show(context);
+                          final p = await ProductImageEditor.show(context);
                           if (p != null && mounted) {
                             setState(() => _imagePath = p);
                           }
@@ -674,8 +712,7 @@ class _AdminProductEditorState extends State<AdminProductEditor> {
                         label: S.t('cardgen.open'),
                         icon: AppIcons.palette,
                         onPressed: () async {
-                          final p = await CardGeneratorScreen
-                              .show(context);
+                          final p = await CardGeneratorScreen.show(context);
                           if (p != null && mounted) {
                             setState(() => _imagePath = p);
                           }
@@ -686,7 +723,9 @@ class _AdminProductEditorState extends State<AdminProductEditor> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 KoraTextField(
-                    controller: _name, hint: S.t('admin.product_name'),),
+                  controller: _name,
+                  hint: S.t('admin.product_name'),
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 KoraTextField(
                   controller: _desc,
@@ -737,22 +776,43 @@ class _AdminProductEditorState extends State<AdminProductEditor> {
                       child: DropdownButtonFormField<String>(
                         initialValue: _storeId,
                         decoration: InputDecoration(
-                            labelText: S.t('admin.store'),),
+                          labelText: S.t('admin.store'),
+                        ),
                         items: [
                           for (final s in stores)
                             DropdownMenuItem(
-                                value: s.id, child: Text(s.name),),
+                              value: s.id,
+                              child: Text(s.name),
+                            ),
                         ],
-                        onChanged: (v) =>
-                            setState(() => _storeId = v),
+                        onChanged: (v) => setState(() => _storeId = v),
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: AppSpacing.sm),
+                // Catalog section — groups products on the storefront.
+                DropdownButtonFormField<String>(
+                  initialValue: _categoryId,
+                  decoration: InputDecoration(
+                    labelText: S.t('admin.category'),
+                  ),
+                  items: [
+                    for (final cat in ref.watch(categoriesProvider).value ??
+                        const <Category>[])
+                      DropdownMenuItem(
+                        value: cat.id,
+                        child: Text(cat.name),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() => _categoryId = v),
+                ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(S.t('admin.available'),
-                      style: AppTypography.label,),
+                  title: Text(
+                    S.t('admin.available'),
+                    style: AppTypography.label,
+                  ),
                   value: _available,
                   activeThumbColor: KoraColors.primary,
                   onChanged: (v) => setState(() => _available = v),
@@ -763,7 +823,8 @@ class _AdminProductEditorState extends State<AdminProductEditor> {
                   onPressed: _save,
                 ),
                 SizedBox(
-                    height: MediaQuery.of(context).viewInsets.bottom,),
+                  height: MediaQuery.of(context).viewInsets.bottom,
+                ),
               ],
             ),
           );
@@ -795,8 +856,7 @@ class _AdminPromoTabState extends State<AdminPromoTab> {
     _future = widget.repo.promotions();
   }
 
-  void _reload() =>
-      setState(() => _future = widget.repo.promotions());
+  void _reload() => setState(() => _future = widget.repo.promotions());
 
   @override
   Widget build(BuildContext context) {
@@ -821,8 +881,7 @@ class _AdminPromoTabState extends State<AdminPromoTab> {
         return ListView.separated(
           padding: const EdgeInsets.all(AppSpacing.lg),
           itemCount: list.length,
-          separatorBuilder: (_, __) =>
-              const SizedBox(height: AppSpacing.sm),
+          separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
           itemBuilder: (_, i) {
             final p = list[i];
             return KoraCard(
@@ -835,8 +894,11 @@ class _AdminPromoTabState extends State<AdminPromoTab> {
                       gradient: KoraColors.primaryGradient,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(AppIcons.gift,
-                        color: KoraColors.white, size: 20,),
+                    child: const Icon(
+                      AppIcons.gift,
+                      color: KoraColors.white,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
@@ -845,16 +907,21 @@ class _AdminPromoTabState extends State<AdminPromoTab> {
                       children: [
                         Text(p.title, style: AppTypography.label),
                         if (p.subtitle != null)
-                          Text(p.subtitle!,
-                              style: AppTypography.caption,),
+                          Text(
+                            p.subtitle!,
+                            style: AppTypography.caption,
+                          ),
                       ],
                     ),
                   ),
                   if (p.discountPercent != null)
                     KoraBadge(label: '-${p.discountPercent}%'),
                   IconButton(
-                    icon: Icon(AppIcons.delete,
-                        color: KoraColors.placeholderC, size: 20,),
+                    icon: Icon(
+                      AppIcons.delete,
+                      color: KoraColors.placeholderC,
+                      size: 20,
+                    ),
                     onPressed: () async {
                       await widget.repo.deletePromotion(p.id);
                       _reload();
@@ -876,7 +943,9 @@ class AdminPromoEditor extends StatefulWidget {
   final AdminRepository repo;
 
   static Future<bool> show(
-      BuildContext context, AdminRepository repo,) async {
+    BuildContext context,
+    AdminRepository repo,
+  ) async {
     final res = await KoraBottomSheet.show<bool>(
       context,
       child: AdminPromoEditor(repo: repo),
@@ -900,9 +969,8 @@ class _AdminPromoEditorState extends State<AdminPromoEditor> {
     try {
       await widget.repo.createPromotion({
         'title': _title.text.trim(),
-        'subtitle': _subtitle.text.trim().isEmpty
-            ? null
-            : _subtitle.text.trim(),
+        'subtitle':
+            _subtitle.text.trim().isEmpty ? null : _subtitle.text.trim(),
         'discountPercent': int.tryParse(_percent.text.trim()),
       });
       if (mounted) Navigator.of(context).pop(true);
@@ -922,10 +990,14 @@ class _AdminPromoEditorState extends State<AdminPromoEditor> {
           Text(S.t('admin.promo_new'), style: AppTypography.title),
           const SizedBox(height: AppSpacing.md),
           KoraTextField(
-              controller: _title, hint: S.t('admin.promo_title'),),
+            controller: _title,
+            hint: S.t('admin.promo_title'),
+          ),
           const SizedBox(height: AppSpacing.sm),
           KoraTextField(
-              controller: _subtitle, hint: S.t('admin.promo_subtitle'),),
+            controller: _subtitle,
+            hint: S.t('admin.promo_subtitle'),
+          ),
           const SizedBox(height: AppSpacing.sm),
           KoraTextField(
             controller: _percent,
@@ -935,9 +1007,10 @@ class _AdminPromoEditorState extends State<AdminPromoEditor> {
           ),
           const SizedBox(height: AppSpacing.lg),
           KoraButton(
-              label: S.t('common.save'),
-              loading: _saving,
-              onPressed: _save,),
+            label: S.t('common.save'),
+            loading: _saving,
+            onPressed: _save,
+          ),
           SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
         ],
       ),
@@ -967,8 +1040,7 @@ class _AdminPromoCodeTabState extends State<AdminPromoCodeTab> {
     _future = widget.repo.promoCodes();
   }
 
-  void _reload() =>
-      setState(() => _future = widget.repo.promoCodes());
+  void _reload() => setState(() => _future = widget.repo.promoCodes());
 
   @override
   Widget build(BuildContext context) {
@@ -993,8 +1065,7 @@ class _AdminPromoCodeTabState extends State<AdminPromoCodeTab> {
         return ListView.separated(
           padding: const EdgeInsets.all(AppSpacing.lg),
           itemCount: list.length,
-          separatorBuilder: (_, __) =>
-              const SizedBox(height: AppSpacing.sm),
+          separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
           itemBuilder: (_, i) {
             final c = list[i];
             final discount = (c['discountTiyn'] as num?)?.toInt() ?? 0;
@@ -1010,8 +1081,11 @@ class _AdminPromoCodeTabState extends State<AdminPromoCodeTab> {
                       color: KoraColors.selected,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(AppIcons.promo,
-                        color: KoraColors.primary, size: 20,),
+                    child: const Icon(
+                      AppIcons.promo,
+                      color: KoraColors.primary,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
@@ -1021,18 +1095,18 @@ class _AdminPromoCodeTabState extends State<AdminPromoCodeTab> {
                         Text('${c['code']}', style: AppTypography.label),
                         Text(
                           [
-                            if (discount > 0)
-                              '−${KoraPrice.format(discount)}',
+                            if (discount > 0) '−${KoraPrice.format(discount)}',
                             if (percent != null) '−$percent%',
-                            if (productId != null)
-                              S.t('admin.for_product'),
-                            if (((c['minOrderTiyn'] as num?)?.toInt() ??
-                                    0) >
-                                0)
-                              S.t('promo.min_order', {
-                                'amount': KoraPrice.format(
-                                    (c['minOrderTiyn'] as num).toInt(),),
-                              },),
+                            if (productId != null) S.t('admin.for_product'),
+                            if (((c['minOrderTiyn'] as num?)?.toInt() ?? 0) > 0)
+                              S.t(
+                                'promo.min_order',
+                                {
+                                  'amount': KoraPrice.format(
+                                    (c['minOrderTiyn'] as num).toInt(),
+                                  ),
+                                },
+                              ),
                           ].join(' · '),
                           style: AppTypography.caption,
                         ),
@@ -1040,11 +1114,13 @@ class _AdminPromoCodeTabState extends State<AdminPromoCodeTab> {
                     ),
                   ),
                   IconButton(
-                    icon: Icon(AppIcons.delete,
-                        color: KoraColors.placeholderC, size: 20,),
+                    icon: Icon(
+                      AppIcons.delete,
+                      color: KoraColors.placeholderC,
+                      size: 20,
+                    ),
                     onPressed: () async {
-                      await widget.repo
-                          .deletePromoCode('${c['code']}');
+                      await widget.repo.deletePromoCode('${c['code']}');
                       _reload();
                     },
                   ),
@@ -1064,7 +1140,9 @@ class AdminPromoCodeEditor extends StatefulWidget {
   final AdminRepository repo;
 
   static Future<bool> show(
-      BuildContext context, AdminRepository repo,) async {
+    BuildContext context,
+    AdminRepository repo,
+  ) async {
     final res = await KoraBottomSheet.show<bool>(
       context,
       child: AdminPromoCodeEditor(repo: repo),
@@ -1073,8 +1151,7 @@ class AdminPromoCodeEditor extends StatefulWidget {
   }
 
   @override
-  State<AdminPromoCodeEditor> createState() =>
-      _AdminPromoCodeEditorState();
+  State<AdminPromoCodeEditor> createState() => _AdminPromoCodeEditorState();
 }
 
 class _AdminPromoCodeEditorState extends State<AdminPromoCodeEditor> {
@@ -1090,10 +1167,8 @@ class _AdminPromoCodeEditorState extends State<AdminPromoCodeEditor> {
     try {
       await widget.repo.createPromoCode({
         'code': _code.text.trim().toUpperCase(),
-        'discountTiyn':
-            (int.tryParse(_discount.text.trim()) ?? 0) * 100,
-        'minOrderTiyn':
-            (int.tryParse(_minOrder.text.trim()) ?? 0) * 100,
+        'discountTiyn': (int.tryParse(_discount.text.trim()) ?? 0) * 100,
+        'minOrderTiyn': (int.tryParse(_minOrder.text.trim()) ?? 0) * 100,
         if (_productId != null) 'productId': _productId,
       });
       if (mounted) {
@@ -1117,8 +1192,10 @@ class _AdminPromoCodeEditorState extends State<AdminPromoCodeEditor> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(S.t('admin.promocode_new'),
-                  style: AppTypography.title,),
+              Text(
+                S.t('admin.promocode_new'),
+                style: AppTypography.title,
+              ),
               const SizedBox(height: AppSpacing.md),
               KoraTextField(
                 controller: _code,
@@ -1172,7 +1249,8 @@ class _AdminPromoCodeEditorState extends State<AdminPromoCodeEditor> {
                 onPressed: _save,
               ),
               SizedBox(
-                  height: MediaQuery.of(context).viewInsets.bottom,),
+                height: MediaQuery.of(context).viewInsets.bottom,
+              ),
             ],
           );
         },

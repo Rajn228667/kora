@@ -72,7 +72,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
     setState(() => _saving = true);
     try {
       await ref.read(apiClientProvider).put('/manager/schedule', body: {
-        'storeId': 'st-handam',
+        'storeId': 'kora-market',
         'days': _days.map(
           (d, v) => MapEntry(
             '$d',
