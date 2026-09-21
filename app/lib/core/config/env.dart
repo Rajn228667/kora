@@ -14,14 +14,18 @@ abstract final class AppEnv {
   static const String mode =
       String.fromEnvironment('APP_MODE', defaultValue: 'api');
 
+  /// Default targets the deployed Vercel backend. Local development
+  /// overrides with --dart-define=API_URL=http://localhost:3000.
   static const String apiUrl = String.fromEnvironment(
     'API_URL',
-    defaultValue: 'http://localhost:3000',
+    defaultValue: 'https://kora-api.vercel.app',
   );
 
+  /// WebSocket endpoint — unused on Vercel serverless (no persistent
+  /// sockets); the client falls back to pull-refresh when it cannot connect.
   static const String wsUrl = String.fromEnvironment(
     'WS_URL',
-    defaultValue: 'ws://localhost:3000',
+    defaultValue: 'wss://kora-api.vercel.app',
   );
 
   /// 2GIS Mobile SDK key (https://dev.2gis.com). When empty the app

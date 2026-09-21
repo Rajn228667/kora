@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_auth/local_auth.dart';
 import '../../../core/l10n/app_strings.dart';
+import '../../../core/theme/app_animations.dart';
 import '../../../core/models/models.dart';
 import '../../../core/theme/app_icons.dart';
 import '../../../core/theme/app_metrics.dart';
@@ -439,7 +440,9 @@ class _FavoriteProductsTab extends ConsumerWidget {
             itemCount: list.length,
             itemBuilder: (_, i) {
               final p = list[i];
-              return KoraProductCard(
+              return KoraEntrance(
+                index: i,
+                child: KoraProductCard(
                 name: p.name,
                 priceTiyn: p.priceTiyn,
                 oldPriceTiyn: p.oldPriceTiyn,
@@ -453,6 +456,7 @@ class _FavoriteProductsTab extends ConsumerWidget {
                     .toggle(p.id),
                 onTap: () => context
                     .push('/store/${p.storeId}/product/${p.id}'),
+                ),
               );
             },
           );

@@ -163,7 +163,9 @@ class StoreScreen extends ConsumerWidget {
                             final favIds =
                                 ref.watch(favoriteProductsProvider).value ??
                                     const <String>{};
-                            return KoraProductCard(
+                            return KoraEntrance(
+                              index: i,
+                              child: KoraProductCard(
                               name: list[i].name,
                               priceTiyn: list[i].priceTiyn,
                               oldPriceTiyn: list[i].oldPriceTiyn,
@@ -189,6 +191,7 @@ class StoreScreen extends ConsumerWidget {
                                   );
                                 }
                               }),
+                              ),
                             );
                           },
                           childCount: list.length,
