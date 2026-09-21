@@ -26,6 +26,8 @@ const schema = z.object({
   OTP_RESEND_SECONDS: z.coerce.number().int().min(30).default(60),
   OTP_RATE_LIMIT_PER_HOUR: z.coerce.number().int().min(1).default(10),
   CORS_ORIGINS: z.string().default(''),
+  ADMIN_EMAIL: z.string().email().optional(),
+  ADMIN_PASSWORD: z.string().min(8).optional(),
   RATE_LIMIT_MAX: z.coerce.number().int().min(10).default(300),
   RATE_LIMIT_AUTH_MAX: z.coerce.number().int().min(1).default(20),
 });

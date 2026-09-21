@@ -9,6 +9,32 @@ const profileSchema = z.object({
   avatarUrl: z.string().url().max(2048).nullable().optional(),
 }).refine((value) => value.name !== undefined || value.avatarUrl !== undefined);
 
+const addressSchema = z.object({
+  label: z.string().trim().min(1).max(60),
+  address: z.string().trim().min(1).max(300),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  comment: z.string().trim().max(500).optional(),
+});
+
+const addressJson = (a: {
+  id: string;
+  label: string;
+  address: string;
+  lat: number;
+  lng: number;
+  comment: string | null;
+  isDefault: boolean;
+}) => ({
+  id: a.id,
+  label: a.label,
+  address: a.address,
+  lat: a.lat,
+  lng: a.lng,
+  comment: a.comment,
+  isDefault: a.isDefault,
+});
+
 const publicUser = (user: {
   id: string;
   phone: string;
@@ -76,5 +102,231 @@ export async function registerUserRoutes(app: FastifyInstance, config: Config): 
       }),
     ]);
     return reply.code(204).send();
+  });
+
+  // ── Addresses ──
+  app.get('/v1/users/me/addresses', async (request, reply) => {
+    const auth = await authenticate(request, reply, config);
+    if (!auth) return;
+    const items = await prisma.address.findMany({
+      where: { userId: auth.sub },
+      orderBy: { createdAt: 'desc' },
+    });
+    return { items: items.map(addressJson) };
+  });
+
+  app.post('/v1/users/me/addresses', async (request, reply) => {
+    const auth = await authenticate(request, reply, config);
+    if (!auth) return;
+    const input = addressSchema.parse(request.body);
+    const count = await prisma.address.count({ where: { userId: auth.sub } });
+    const created = await prisma.address.create({
+      data: { ...input, userId: auth.sub, isDefault: count === 0 },
+    });
+    return reply.code(201).send(addressJson(created));
+  });
+
+  app.delete('/v1/users/me/addresses/:id', async (request, reply) => {
+    const auth = await authenticate(request, reply, config);
+    if (!auth) return;
+    const { id } = request.params as { id: string };
+    await prisma.address.deleteMany({
+      where: { id, userId: auth.sub },
+    });
+    return reply.code(204).send();
+  });
+
+  // ── Favorites ──
+  app.get('/v1/users/me/favorites', async (request, reply) => {
+    const auth = await authenticate(request, reply, config);
+    if (!auth) return;
+    const favs = await prisma.favorite.findMany({
+      where: { userId: auth.sub, storeId: { not: null } },
+      orderBy: { createdAt: 'desc' },
+    });
+    const stores = await prisma.store.findMany({
+      where: { id: { in: favs.map((f) => f.storeId!) } },
+      include: { schedule: true },
+    });
+    return { items: stores.map((s) => ({ ...s, isOpen: s.active })) };
+  });
+
+  app.post('/v1/users/me/favorites', async (request, reply) => {
+    const auth = await authenticate(request, reply, config);
+    if (!auth) return;
+    const { storeId } = z
+      .object({ storeId: z.string().min(1) })
+      .parse(request.body);
+    const exists = await prisma.favorite.findFirst({
+      where: { userId: auth.sub, storeId },
+    });
+    if (!exists) {
+      await prisma.favorite.create({ data: { userId: auth.sub, storeId } });
+    }
+    return { ok: true };
+  });
+
+  app.delete('/v1/users/me/favorites/:storeId', async (request, reply) => {
+    const auth = await authenticate(request, reply, config);
+    if (!auth) return;
+    const { storeId } = request.params as { storeId: string };
+    await prisma.favorite.deleteMany({
+      where: { userId: auth.sub, storeId },
+    });
+    return reply.code(204).send();
+  });
+
+  app.get('/v1/users/me/favorites/products', async (request, reply) => {
+    const auth = await authenticate(request, reply, config);
+    if (!auth) return;
+    const favs = await prisma.favorite.findMany({
+      where: { userId: auth.sub, productId: { not: null } },
+      orderBy: { createdAt: 'desc' },
+    });
+    const products = await prisma.product.findMany({
+      where: { id: { in: favs.map((f) => f.productId!) }, active: true },
+    });
+    return { items: products };
+  });
+
+  app.post('/v1/users/me/favorites/products', async (request, reply) => {
+    const auth = await authenticate(request, reply, config);
+    if (!auth) return;
+    const { productId } = z
+      .object({ productId: z.string().min(1) })
+      .parse(request.body);
+    const exists = await prisma.favorite.findFirst({
+      where: { userId: auth.sub, productId },
+    });
+    if (!exists) {
+      await prisma.favorite.create({ data: { userId: auth.sub, productId } });
+    }
+    return { ok: true };
+  });
+
+  app.delete(
+    '/v1/users/me/favorites/products/:productId',
+    async (request, reply) => {
+      const auth = await authenticate(request, reply, config);
+      if (!auth) return;
+      const { productId } = request.params as { productId: string };
+      await prisma.favorite.deleteMany({
+        where: { userId: auth.sub, productId },
+      });
+      return reply.code(204).send();
+    },
+  );
+
+  // ── Recently viewed ──
+  app.get('/v1/users/me/recently-viewed', async (request, reply) => {
+    const auth = await authenticate(request, reply, config);
+    if (!auth) return;
+    const views = await prisma.recentlyViewed.findMany({
+      where: { userId: auth.sub },
+      orderBy: { viewedAt: 'desc' },
+      take: 30,
+    });
+    const products = await prisma.product.findMany({
+      where: { id: { in: views.map((v) => v.productId) }, active: true },
+    });
+    const byId = new Map(products.map((p) => [p.id, p]));
+    return {
+      items: views
+        .map((v) => byId.get(v.productId))
+        .filter((p) => p !== undefined),
+    };
+  });
+
+  app.post('/v1/users/me/recently-viewed', async (request, reply) => {
+    const auth = await authenticate(request, reply, config);
+    if (!auth) return;
+    const { productId } = z
+      .object({ productId: z.string().min(1) })
+      .parse(request.body);
+    await prisma.recentlyViewed.upsert({
+      where: { userId_productId: { userId: auth.sub, productId } },
+      create: { userId: auth.sub, productId },
+      update: { viewedAt: new Date() },
+    });
+    return { ok: true };
+  });
+
+  // ── Sessions ──
+  app.get('/v1/users/me/sessions', async (request, reply) => {
+    const auth = await authenticate(request, reply, config);
+    if (!auth) return;
+    const sessions = await prisma.session.findMany({
+      where: { userId: auth.sub, revokedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return {
+      items: sessions.map((s) => ({
+        id: s.id,
+        device: s.device,
+        createdAt: s.createdAt.toISOString(),
+        current: s.id === auth.sessionId,
+      })),
+    };
+  });
+
+  // ── Wallet & referral ──
+  app.get('/v1/users/me/wallet', async (request, reply) => {
+    const auth = await authenticate(request, reply, config);
+    if (!auth) return;
+    const wallet = await prisma.walletAccount.upsert({
+      where: { userId: auth.sub },
+      create: { userId: auth.sub },
+      update: {},
+      include: { txns: true },
+    });
+    const earned = wallet.txns
+      .filter((t) => t.amountTiyn > 0)
+      .reduce((s, t) => s + t.amountTiyn, 0);
+    const spent = wallet.txns
+      .filter((t) => t.amountTiyn < 0)
+      .reduce((s, t) => s - t.amountTiyn, 0);
+    return {
+      balanceTiyn: wallet.balanceTiyn,
+      earnedTiyn: earned,
+      spentTiyn: spent,
+    };
+  });
+
+  app.get('/v1/users/me/wallet/transactions', async (request, reply) => {
+    const auth = await authenticate(request, reply, config);
+    if (!auth) return;
+    const txns = await prisma.walletTransaction.findMany({
+      where: { accountId: auth.sub },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+    return {
+      items: txns.map((t) => ({
+        id: t.id,
+        kind: t.kind,
+        amountTiyn: t.amountTiyn,
+        title: t.title,
+        orderId: t.orderId,
+        createdAt: t.createdAt.toISOString(),
+      })),
+    };
+  });
+
+  app.get('/v1/users/me/referral', async (request, reply) => {
+    const auth = await authenticate(request, reply, config);
+    if (!auth) return;
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: auth.sub },
+      select: { referralCode: true, referrals: { select: { id: true } } },
+    });
+    const bonus = await prisma.walletTransaction.aggregate({
+      where: { accountId: auth.sub, kind: 'referral_bonus' },
+      _sum: { amountTiyn: true },
+    });
+    return {
+      code: user.referralCode,
+      invited: user.referrals.length,
+      bonusTiyn: bonus._sum.amountTiyn ?? 0,
+    };
   });
 }

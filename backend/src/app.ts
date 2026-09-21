@@ -6,6 +6,10 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { ZodError } from 'zod';
 import { registerAuthRoutes } from './auth/routes.js';
 import { registerCatalogRoutes } from './catalog/routes.js';
+import { registerChatRoutes } from './chat/routes.js';
+import { registerCommerceRoutes } from './commerce/routes.js';
+import { registerCourierRoutes } from './courier/routes.js';
+import { registerSupportRoutes } from './support/routes.js';
 import type { Config } from './config.js';
 import { NotificationService } from './notifications/notification-service.js';
 import { createPushChannel } from './notifications/push-provider.js';
@@ -70,6 +74,10 @@ export async function buildApp(config: Config): Promise<FastifyInstance> {
   await registerAuthRoutes(app, config);
   await registerUserRoutes(app, config);
   await registerCatalogRoutes(app, config);
+  await registerCommerceRoutes(app, config);
   await registerNotificationRoutes(app, config);
+  await registerSupportRoutes(app, config);
+  await registerChatRoutes(app, config);
+  await registerCourierRoutes(app, config);
   return app;
 }

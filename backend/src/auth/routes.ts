@@ -5,6 +5,7 @@ import type { Config } from '../config.js';
 import { prisma } from '../plugins/prisma.js';
 import { authenticate } from './guard.js';
 import { createOtpProvider } from './sms-provider.js';
+import { verifyPassword } from './passwords.js';
 import { hashToken, newRefreshToken, signAccessToken } from './tokens.js';
 
 const phoneSchema = z.string().regex(/^\+7[67]\d{9}$/, 'Invalid Kazakhstan mobile number');
@@ -18,6 +19,10 @@ const verifySchema = z.object({
   code: z.string().regex(/^\d{6}$/),
 });
 const refreshSchema = z.object({ refreshToken: z.string().min(32) });
+const loginSchema = z.object({
+  email: z.string().email().max(254),
+  password: z.string().min(1).max(200),
+});
 
 const otpHash = (requestId: string, code: string, secret: string): string =>
   createHash('sha256').update(`${requestId}:${code}:${secret}`).digest('hex');
@@ -149,6 +154,48 @@ export async function registerAuthRoutes(app: FastifyInstance, config: Config): 
       accessToken,
       refreshToken: result.refreshToken,
       isNewUser: result.isNewUser,
+    };
+  });
+
+  // Staff console login — password verified with scrypt, staff roles only.
+  app.post('/v1/auth/login', {
+    config: { rateLimit: { max: config.RATE_LIMIT_AUTH_MAX, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
+    const { email, password } = loginSchema.parse(request.body);
+    const user = await prisma.user.findUnique({ where: { email } });
+    const valid = user?.passwordHash
+      ? await verifyPassword(password, user.passwordHash)
+      : false;
+    if (
+      !user ||
+      user.deletedAt ||
+      !valid ||
+      user.role === 'customer'
+    ) {
+      return reply.code(401).send({
+        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' },
+      });
+    }
+    const refreshToken = newRefreshToken();
+    const session = await prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshTokenHash: hashToken(refreshToken),
+        ip: request.ip,
+        device: String(request.headers['user-agent'] ?? '').slice(0, 250),
+        expiresAt: new Date(Date.now() + config.JWT_REFRESH_TTL * 1000),
+      },
+    });
+    const accessToken = await signAccessToken(config, {
+      sub: user.id,
+      role: user.role,
+      sessionId: session.id,
+    });
+    return {
+      user: publicUser(user),
+      accessToken,
+      refreshToken,
+      isNewUser: false,
     };
   });
 
