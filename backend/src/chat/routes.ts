@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { authenticate } from '../auth/guard.js';
 import type { Config } from '../config.js';
 import { prisma } from '../plugins/prisma.js';
+import { emitOrderEvent } from '../realtime/gateway.js';
 
 const messageJson = (
   m: {
@@ -150,9 +151,12 @@ export async function registerChatRoutes(
         mediaUrl: input.mediaUrl ?? null,
       },
     });
-    return reply.code(201).send(
-      messageJson(message, input.lat ?? null, input.lng ?? null),
-    );
+    const json = messageJson(message, input.lat ?? null, input.lng ?? null);
+    void emitOrderEvent(app.realtime, room.orderId, 'chat.message_created', {
+      roomId: id,
+      message: json as unknown as Record<string, unknown>,
+    }).catch(() => {});
+    return reply.code(201).send(json);
   });
 
   app.post('/v1/chat/rooms/:id/read', async (request, reply) => {

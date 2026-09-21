@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { authenticate } from '../auth/guard.js';
 import type { Config } from '../config.js';
 import { prisma } from '../plugins/prisma.js';
+import { emitOrderEvent } from '../realtime/gateway.js';
 
 export async function registerCourierRoutes(
   app: FastifyInstance,
@@ -60,6 +61,19 @@ export async function registerCourierRoutes(
           ]
         : []),
     ]);
+    if (profile.activeOrder) {
+      const order = await prisma.order.findUnique({
+        where: { id: profile.activeOrder },
+        select: { userId: true },
+      });
+      if (order) {
+        app.realtime.sendToUser(order.userId, 'courier.location_updated', {
+          orderId: profile.activeOrder,
+          lat,
+          lng,
+        });
+      }
+    }
     return { ok: true };
   });
 
@@ -109,6 +123,11 @@ export async function registerCourierRoutes(
       });
       return { ok: true };
     }
+    const me = await prisma.user.findUnique({
+      where: { id: auth.sub },
+      select: { name: true },
+    });
+    const courierName = me?.name ?? null;
     await prisma.$transaction([
       prisma.courierOffer.update({
         where: { id: offerId },
@@ -118,16 +137,14 @@ export async function registerCourierRoutes(
         where: { id: offer.orderId },
         data: {
           courierId: auth.sub,
-          courierName:
-            (await prisma.user
-              .findUnique({ where: { id: auth.sub }, select: { name: true } })
-              .then((u) => u?.name)) ?? null,
+          courierName: courierName,
           status: 'courier_assigned',
         },
       }),
-      prisma.courierProfile.update({
+      prisma.courierProfile.upsert({
         where: { userId: auth.sub },
-        data: { status: 'busy', activeOrder: offer.orderId },
+        create: { userId: auth.sub, status: 'busy', activeOrder: offer.orderId },
+        update: { status: 'busy', activeOrder: offer.orderId },
       }),
       prisma.orderStatusEntry.create({
         data: {
@@ -168,13 +185,16 @@ export async function registerCourierRoutes(
       }),
       ...(status === 'delivered'
         ? [
-            prisma.courierProfile.update({
+            prisma.courierProfile.updateMany({
               where: { userId: auth.sub },
               data: { status: 'online', activeOrder: null },
             }),
           ]
         : []),
     ]);
+    void emitOrderEvent(app.realtime, orderId, 'order.status_changed', {
+      status,
+    }).catch(() => {});
     return { ok: true };
   });
 }

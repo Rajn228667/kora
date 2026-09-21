@@ -23,7 +23,7 @@ export async function authenticate(
         userId: claims.sub,
         revokedAt: null,
         expiresAt: { gt: new Date() },
-        user: { deletedAt: null },
+        user: { deletedAt: null, blockedAt: null },
       },
     });
     if (!session) throw new Error('Session revoked');

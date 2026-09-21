@@ -115,7 +115,8 @@ export async function registerCatalogRoutes(app: FastifyInstance, config: Config
     };
   });
 
-  app.post('/v1/manager/products', async (request, reply) => {
+  for (const prefix of ['/v1/manager', '/v1/admin']) {
+  app.post(`${prefix}/products`, async (request, reply) => {
     const auth = await authenticate(request, reply, config, ['manager', 'admin']);
     if (!auth) return;
     const input = productInput.parse(request.body);
@@ -143,7 +144,7 @@ export async function registerCatalogRoutes(app: FastifyInstance, config: Config
     return reply.code(201).send(product);
   });
 
-  app.patch('/v1/manager/products/:id', async (request, reply) => {
+  app.patch(`${prefix}/products/:id`, async (request, reply) => {
     const auth = await authenticate(request, reply, config, ['manager', 'admin']);
     if (!auth) return;
     const params = z.object({ id }).parse(request.params);
@@ -174,7 +175,7 @@ export async function registerCatalogRoutes(app: FastifyInstance, config: Config
     return product;
   });
 
-  app.delete('/v1/manager/products/:id', async (request, reply) => {
+  app.delete(`${prefix}/products/:id`, async (request, reply) => {
     const auth = await authenticate(request, reply, config, ['manager', 'admin']);
     if (!auth) return;
     const params = z.object({ id }).parse(request.params);
@@ -186,4 +187,5 @@ export async function registerCatalogRoutes(app: FastifyInstance, config: Config
     await prisma.product.update({ where: { id: params.id }, data: { active: false, available: false } });
     return reply.code(204).send();
   });
+  }
 }

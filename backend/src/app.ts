@@ -6,15 +6,18 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { ZodError } from 'zod';
 import { registerAuthRoutes } from './auth/routes.js';
 import { registerCatalogRoutes } from './catalog/routes.js';
+import { registerAdminRoutes } from './admin/routes.js';
 import { registerChatRoutes } from './chat/routes.js';
 import { registerCommerceRoutes } from './commerce/routes.js';
 import { registerCourierRoutes } from './courier/routes.js';
+import { registerManagerRoutes } from './manager/routes.js';
 import { registerSupportRoutes } from './support/routes.js';
 import type { Config } from './config.js';
 import { NotificationService } from './notifications/notification-service.js';
 import { createPushChannel } from './notifications/push-provider.js';
 import { registerNotificationRoutes } from './notifications/routes.js';
 import { prisma } from './plugins/prisma.js';
+import { registerRealtimeGateway } from './realtime/gateway.js';
 import { registerUserRoutes } from './users/routes.js';
 
 export async function buildApp(config: Config): Promise<FastifyInstance> {
@@ -79,5 +82,8 @@ export async function buildApp(config: Config): Promise<FastifyInstance> {
   await registerSupportRoutes(app, config);
   await registerChatRoutes(app, config);
   await registerCourierRoutes(app, config);
+  await registerManagerRoutes(app, config);
+  await registerAdminRoutes(app, config);
+  await registerRealtimeGateway(app, config);
   return app;
 }

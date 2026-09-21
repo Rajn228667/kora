@@ -4,11 +4,12 @@ import { z } from 'zod';
 import { authenticate } from '../auth/guard.js';
 import type { Config } from '../config.js';
 import { prisma } from '../plugins/prisma.js';
+import { emitOrderEvent } from '../realtime/gateway.js';
 
 const id = z.string().min(1).max(100);
 const idParams = z.object({ id });
 
-const productSelect = {
+export const productSelect = {
   id: true,
   storeId: true,
   categoryId: true,
@@ -34,7 +35,7 @@ const productSelect = {
   characteristics: true,
 } as const;
 
-const storeSelect = {
+export const storeSelect = {
   id: true,
   name: true,
   kind: true,
@@ -81,7 +82,7 @@ function isOpenNow(store: StoreRow): boolean {
   return store.active && minutes >= day.openMin && minutes < day.closeMin;
 }
 
-function storeJson(store: StoreRow) {
+export function storeJson(store: StoreRow) {
   const open = dayHours(store);
   return {
     id: store.id,
@@ -167,7 +168,7 @@ type OrderWithRelations = NonNullable<
   Awaited<ReturnType<typeof loadOrder>>
 >;
 
-async function loadOrder(orderId: string) {
+export async function loadOrder(orderId: string) {
   return prisma.order.findUnique({
     where: { id: orderId },
     include: {
@@ -188,7 +189,7 @@ async function courierPhone(order: OrderWithRelations): Promise<string | null> {
   return courier?.phone ?? null;
 }
 
-async function orderJson(order: OrderWithRelations) {
+export async function orderJson(order: OrderWithRelations) {
   const payment = order.payments[0];
   return {
     id: order.id,
@@ -667,6 +668,9 @@ export async function registerCommerceRoutes(
       return created;
     });
 
+    app.realtime.sendToUser(auth.sub, 'order.created', {
+      orderId: order.id,
+    });
     void app.notifications
       .send({
         userId: auth.sub,
@@ -799,6 +803,9 @@ export async function registerCommerceRoutes(
         },
       });
     });
+    void emitOrderEvent(app.realtime, orderId, 'order.status_changed', {
+      status: 'cancelled',
+    }).catch(() => {});
     return orderJson(updated);
   });
 
