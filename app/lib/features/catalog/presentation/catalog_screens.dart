@@ -702,9 +702,22 @@ class _GridProductTile extends ConsumerWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: KoraPrice(
-                        tiyn: p.priceTiyn,
-                        style: AppTypography.label,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          KoraPrice(
+                            tiyn: p.priceTiyn,
+                            style: AppTypography.label,
+                          ),
+                          if (old != null)
+                            KoraPrice(
+                              tiyn: old,
+                              style: AppTypography.caption.copyWith(
+                                color: KoraColors.placeholderC,
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     if (p.available)

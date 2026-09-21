@@ -101,6 +101,7 @@ abstract final class S {
     'home.deals': 'Скидки и акции',
     'home.promo_tag': 'Акция',
     'home.catalog': 'Каталог',
+    'catalog.filter_all': 'Все',
     'catalog.empty': 'Каталог пока пуст',
     'catalog.empty_sub': 'Менеджер наполняет ассортимент — загляните позже',
     'home.load_error': 'Не удалось загрузить каталог',
@@ -653,6 +654,7 @@ abstract final class S {
     'home.deals': 'Жеңілдіктер мен акциялар',
     'home.promo_tag': 'Акция',
     'home.catalog': 'Каталог',
+    'catalog.filter_all': 'Барлығы',
     'catalog.empty': 'Каталог әзірге бос',
     'catalog.empty_sub': 'Менеджер ассортиментті толтыруда — кейінірек келіңіз',
     'home.load_error': 'Каталогты жүктеу мүмкін болмады',
@@ -1178,6 +1180,7 @@ abstract final class S {
     'home.deals': 'Deals & offers',
     'home.promo_tag': 'Offer',
     'home.catalog': 'Catalog',
+    'catalog.filter_all': 'All',
     'catalog.empty': 'Catalog is empty for now',
     'catalog.empty_sub':
         'The manager is filling the assortment — check back later',

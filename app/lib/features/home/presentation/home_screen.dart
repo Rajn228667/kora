@@ -261,36 +261,48 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: KoraSectionHeader(title: S.t('home.catalog')),
                 ),
               ),
+              // Section filter chips — Wolt venue-style tabs.
+              const SliverToBoxAdapter(
+                child: _CatalogFilterChips(),
+              ),
               catalog.when(
-                data: (items) => items.isEmpty
-                    ? SliverToBoxAdapter(
-                        child: Padding(
+                data: (all) {
+                  final sel = ref.watch(_catalogFilterProvider);
+                  final items = sel == null
+                      ? all
+                      : all.where((p) => p.categoryId == sel).toList();
+                  return items.isEmpty
+                      ? SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.lg,
+                            ),
+                            child: KoraEmptyState(
+                              icon: AppIcons.grocery,
+                              title: S.t('catalog.empty'),
+                              message: sel == null
+                                  ? S.t('catalog.empty_sub')
+                                  : S.t('category.empty_sub'),
+                            ),
+                          ),
+                        )
+                      : SliverPadding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.lg,
                           ),
-                          child: KoraEmptyState(
-                            icon: AppIcons.grocery,
-                            title: S.t('catalog.empty'),
-                            message: S.t('catalog.empty_sub'),
+                          sliver: SliverGrid.builder(
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: AppSpacing.md,
+                              crossAxisSpacing: AppSpacing.md,
+                              childAspectRatio: 0.78,
+                            ),
+                            itemCount: items.length,
+                            itemBuilder: (_, i) => _ProductTile(p: items[i]),
                           ),
-                        ),
-                      )
-                    : SliverPadding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                        ),
-                        sliver: SliverGrid.builder(
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            mainAxisSpacing: AppSpacing.md,
-                            crossAxisSpacing: AppSpacing.md,
-                            childAspectRatio: 0.78,
-                          ),
-                          itemCount: items.length,
-                          itemBuilder: (_, i) => _ProductTile(p: items[i]),
-                        ),
-                      ),
+                        );
+                },
                 loading: () => SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
@@ -925,9 +937,22 @@ class _ProductTile extends ConsumerWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: KoraPrice(
-                        tiyn: p.priceTiyn,
-                        style: AppTypography.label,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          KoraPrice(
+                            tiyn: p.priceTiyn,
+                            style: AppTypography.label,
+                          ),
+                          if (old != null)
+                            KoraPrice(
+                              tiyn: old,
+                              style: AppTypography.caption.copyWith(
+                                color: KoraColors.placeholderC,
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     if (p.available)
@@ -962,6 +987,88 @@ class _ProductTile extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Selected catalog-section filter on the home grid (null = all).
+final _catalogFilterProvider = StateProvider<String?>((ref) => null);
+
+/// Horizontal chips: «Все» + catalog sections; filter the grid inline.
+class _CatalogFilterChips extends ConsumerWidget {
+  const _CatalogFilterChips();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cats = ref.watch(categoriesProvider).value ?? const <Category>[];
+    final products = ref.watch(catalogProvider).value ?? const <Product>[];
+    if (products.isEmpty) return const SizedBox.shrink();
+    // Only sections that actually contain products.
+    final used = products.map((p) => p.categoryId).toSet();
+    final visible = cats.where((cat) => used.contains(cat.id)).toList();
+    final sel = ref.watch(_catalogFilterProvider);
+    return SizedBox(
+      height: 40,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        children: [
+          _FilterChip(
+            label: S.t('catalog.filter_all'),
+            selected: sel == null,
+            onTap: () => ref.read(_catalogFilterProvider.notifier).state = null,
+          ),
+          for (final cat in visible)
+            _FilterChip(
+              label: cat.name,
+              selected: sel == cat.id,
+              onTap: () =>
+                  ref.read(_catalogFilterProvider.notifier).state = cat.id,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSpacing.sm),
+      child: KoraPressable(
+        onTap: onTap,
+        semanticLabel: label,
+        child: AnimatedContainer(
+          duration: AppAnimations.fast,
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.xs,
+          ),
+          decoration: BoxDecoration(
+            color: selected ? KoraColors.primary : KoraColors.surfaceAlt,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: AppTypography.label.copyWith(
+              color: selected ? KoraColors.white : KoraColors.textPrimaryC,
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -595,7 +595,7 @@ class _AdminProductEditorState extends ConsumerState<AdminProductEditor> {
   Future<void> _pickPhoto() async {
     try {
       final x = await ImagePicker()
-          .pickImage(source: ImageSource.gallery, maxWidth: 1024);
+          .pickImage(source: ImageSource.gallery, maxWidth: 1920);
       if (x != null) setState(() => _imagePath = 'file://${x.path}');
     } catch (_) {
       if (mounted) {

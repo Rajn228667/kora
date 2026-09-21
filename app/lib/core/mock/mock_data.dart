@@ -12,7 +12,7 @@ abstract final class MockData {
   static const koraStoreId = 'kora-market';
 
   static String _u(String id) =>
-      'https://images.unsplash.com/$id?auto=format&fit=crop&w=800&q=80';
+      'https://images.unsplash.com/$id?auto=format&fit=crop&w=1920&q=90';
 
   /// Catalog sections (Wolt-style: venue page groups products by these).
   static final categories = <Category>[
