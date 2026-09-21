@@ -7,6 +7,9 @@ import { ZodError } from 'zod';
 import { registerAuthRoutes } from './auth/routes.js';
 import { registerCatalogRoutes } from './catalog/routes.js';
 import type { Config } from './config.js';
+import { NotificationService } from './notifications/notification-service.js';
+import { createPushChannel } from './notifications/push-provider.js';
+import { registerNotificationRoutes } from './notifications/routes.js';
 import { prisma } from './plugins/prisma.js';
 import { registerUserRoutes } from './users/routes.js';
 
@@ -58,8 +61,15 @@ export async function buildApp(config: Config): Promise<FastifyInstance> {
       return reply.code(503).send({ status: 'unavailable' });
     }
   });
+  const pushChannel = createPushChannel(config);
+  const notifications = new NotificationService(
+    pushChannel ? [pushChannel] : [],
+  );
+  app.decorate('notifications', notifications);
+
   await registerAuthRoutes(app, config);
   await registerUserRoutes(app, config);
   await registerCatalogRoutes(app, config);
+  await registerNotificationRoutes(app, config);
   return app;
 }

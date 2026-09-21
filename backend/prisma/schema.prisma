@@ -142,6 +142,8 @@ model User {
   updatedAt     DateTime @updatedAt
 
   sessions        Session[]
+  deviceTokens    DeviceToken[]
+  notificationPrefs Json?
   managedStores   StoreManager[] @relation("StoreManagers")
   addresses       Address[]
   favorites       Favorite[]
@@ -184,6 +186,18 @@ model OtpRequest {
   createdAt   DateTime  @default(now())
 
   @@index([phone, createdAt])
+}
+
+model DeviceToken {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String   @unique
+  platform   String   @default("android") // android | ios | web
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Address {

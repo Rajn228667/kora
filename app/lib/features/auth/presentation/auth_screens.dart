@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/config/env.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/media/kora_image.dart';
 import '../../../core/models/models.dart';
@@ -139,6 +138,7 @@ class PhoneScreen extends ConsumerStatefulWidget {
 
 class _PhoneScreenState extends ConsumerState<PhoneScreen> {
   final _controller = TextEditingController(text: '+7 ');
+  String _channel = 'sms';
   bool _loading = false;
   String? _error;
 
@@ -151,8 +151,9 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
     });
     try {
       final repo = ref.read(authRepositoryProvider);
-      final req =
-          await repo.requestOtp(KzPhoneFormatter.toE164(_controller.text));
+      final req = await repo.requestOtp(
+          KzPhoneFormatter.toE164(_controller.text),
+          channel: _channel,);
       if (!mounted) return;
       unawaited(context.push('/auth/otp', extra: req));
     } on ApiException catch (e) {
@@ -210,29 +211,50 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
                   }
                 },
               ),
-              if (AppEnv.isDev) ...[
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  S.t('phone.dev_hint'),
-                  style: AppTypography.caption,
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                S.t('phone.channel_label'),
+                style: AppTypography.overline,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<String>(
+                  segments: [
+                    ButtonSegment(
+                      value: 'sms',
+                      label: Text(S.t('phone.channel_sms')),
+                      icon: const Icon(AppIcons.send, size: 18),
+                    ),
+                    ButtonSegment(
+                      value: 'whatsapp',
+                      label: Text(S.t('phone.channel_whatsapp')),
+                      icon: const Icon(AppIcons.chat, size: 18),
+                    ),
+                  ],
+                  selected: {_channel},
+                  onSelectionChanged: (v) =>
+                      setState(() => _channel = v.first),
+                  style: ButtonStyle(
+                    visualDensity: VisualDensity.comfortable,
+                    textStyle: WidgetStatePropertyAll(AppTypography.label),
+                  ),
                 ),
-              ],
+              ),
               const Spacer(),
               KoraButton(
                 label: S.t('phone.get_code'),
                 loading: _loading,
                 onPressed: _valid ? _submit : null,
               ),
-              if (AppEnv.isDev) ...[
-                const SizedBox(height: AppSpacing.sm),
-                Center(
-                  child: KoraGhostButton(
-                    label: S.t('phone.admin_login'),
-                    icon: AppIcons.admin,
-                    onPressed: () => _staffLoginSheet(context),
-                  ),
+              const SizedBox(height: AppSpacing.sm),
+              Center(
+                child: KoraGhostButton(
+                  label: S.t('phone.admin_login'),
+                  icon: AppIcons.admin,
+                  onPressed: () => _staffLoginSheet(context),
                 ),
-              ],
+              ),
               const SizedBox(height: AppSpacing.xl),
             ],
           ),
@@ -306,7 +328,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   Future<void> _resend() async {
     try {
       final repo = ref.read(authRepositoryProvider);
-      final req = await repo.requestOtp(widget.request.phone);
+      final req = await repo.requestOtp(widget.request.phone,
+          channel: widget.request.channel,);
       if (!mounted) return;
       context.pushReplacement('/auth/otp', extra: req);
     } on ApiException catch (e) {

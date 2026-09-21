@@ -310,8 +310,9 @@ class OrderDetailScreen extends ConsumerWidget {
                         return;
                       }
                       if (context.mounted) {
-                        unawaited(
-                            context.push('/call/${order.id}?to=courier'),);
+                        KoraSnackbar.show(
+                            context, S.t('call.unavailable'),
+                            isError: true,);
                       }
                     },
                   ),

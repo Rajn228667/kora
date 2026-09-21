@@ -14,8 +14,8 @@ import '../../../core/widgets/misc.dart';
 import '../../catalog/data/catalog_repository.dart';
 import '../../checkout/data/checkout_repository.dart';
 
-/// Settings → Appearance: theme (light/dark/system), language (ru/kk/en),
-/// animation info. Changes apply instantly — no restart needed.
+/// Settings → Appearance: language (ru/kk/en) and animation preferences.
+/// KORA ships a single light lilac identity — there is no theme switch.
 class AppearanceScreen extends ConsumerWidget {
   const AppearanceScreen({super.key});
 
@@ -32,27 +32,6 @@ class AppearanceScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
-          Text(S.t('settings.theme'), style: AppTypography.overline),
-          const SizedBox(height: AppSpacing.sm),
-          KoraCard(
-            padding: EdgeInsets.zero,
-            child: RadioGroup<ThemeMode>(
-              groupValue: settings.themeMode,
-              onChanged: (v) =>
-                  v != null ? ctrl.setThemeMode(v) : null,
-              child: Column(
-                children: [
-                  _themeTile(ThemeMode.light,
-                      S.t('settings.theme_light'), AppIcons.sun,),
-                  _themeTile(ThemeMode.dark,
-                      S.t('settings.theme_dark'), AppIcons.moon,),
-                  _themeTile(ThemeMode.system,
-                      S.t('settings.theme_system'), AppIcons.settings,),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
           Text(S.t('settings.language'), style: AppTypography.overline),
           const SizedBox(height: AppSpacing.sm),
           KoraCard(
@@ -96,15 +75,6 @@ class AppearanceScreen extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _themeTile(ThemeMode mode, String label, IconData icon) {
-    return RadioListTile<ThemeMode>(
-      value: mode,
-      title: Text(label, style: AppTypography.label),
-      secondary: Icon(icon, color: KoraColors.primary, size: 20),
-      activeColor: KoraColors.primary,
     );
   }
 }

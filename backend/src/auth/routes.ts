@@ -4,11 +4,14 @@ import { z } from 'zod';
 import type { Config } from '../config.js';
 import { prisma } from '../plugins/prisma.js';
 import { authenticate } from './guard.js';
-import { createSmsProvider } from './sms-provider.js';
+import { createOtpProvider } from './sms-provider.js';
 import { hashToken, newRefreshToken, signAccessToken } from './tokens.js';
 
 const phoneSchema = z.string().regex(/^\+7[67]\d{9}$/, 'Invalid Kazakhstan mobile number');
-const requestSchema = z.object({ phone: phoneSchema });
+const requestSchema = z.object({
+  phone: phoneSchema,
+  channel: z.enum(['sms', 'whatsapp']).default('sms'),
+});
 const verifySchema = z.object({
   requestId: z.string().min(1),
   phone: phoneSchema,
@@ -36,12 +39,20 @@ const publicUser = (user: {
 });
 
 export async function registerAuthRoutes(app: FastifyInstance, config: Config): Promise<void> {
-  const sms = createSmsProvider(config);
+  const otpProvider = createOtpProvider(config);
 
   app.post('/v1/auth/request-otp', {
     config: { rateLimit: { max: config.RATE_LIMIT_AUTH_MAX, timeWindow: '1 minute' } },
   }, async (request, reply) => {
-    const { phone } = requestSchema.parse(request.body);
+    const { phone, channel } = requestSchema.parse(request.body);
+    if (!otpProvider.channels.includes(channel)) {
+      return reply.code(400).send({
+        error: {
+          code: 'OTP_CHANNEL_UNSUPPORTED',
+          message: `Channel "${channel}" is not supported`,
+        },
+      });
+    }
     const hourAgo = new Date(Date.now() - 3_600_000);
     const recentCount = await prisma.otpRequest.count({
       where: { phone, createdAt: { gte: hourAgo } },
@@ -62,20 +73,27 @@ export async function registerAuthRoutes(app: FastifyInstance, config: Config): 
     }
 
     const requestId = randomUUID();
-    const code = config.SMS_PROVIDER === 'dev' && config.OTP_DEV_CODE
-      ? config.OTP_DEV_CODE
-      : randomInt(100000, 1000000).toString();
+    // Provider-managed OTPs (Twilio Verify) are generated remotely — the
+    // code never exists in our database.
+    const code = otpProvider.providerManaged
+      ? ''
+      : config.SMS_PROVIDER === 'dev' && config.OTP_DEV_CODE
+        ? config.OTP_DEV_CODE
+        : randomInt(100000, 1000000).toString();
     await prisma.otpRequest.create({
       data: {
         id: requestId,
         phone,
-        codeHash: otpHash(requestId, code, config.JWT_SECRET),
+        codeHash: otpProvider.providerManaged
+          ? 'provider'
+          : otpHash(requestId, code, config.JWT_SECRET),
         expiresAt: new Date(Date.now() + config.OTP_TTL_SECONDS * 1000),
       },
     });
-    await sms.sendOtp(phone, code);
+    await otpProvider.sendOtp(phone, code, channel);
     return reply.code(202).send({
       requestId,
+      channel,
       ttlSeconds: config.OTP_TTL_SECONDS,
       ...(config.APP_ENV === 'development' && config.SMS_PROVIDER === 'dev'
         ? { devOtp: code }
@@ -92,7 +110,9 @@ export async function registerAuthRoutes(app: FastifyInstance, config: Config): 
     if (otp.attempts >= config.OTP_MAX_ATTEMPTS) {
       return reply.code(429).send({ error: { code: 'OTP_ATTEMPTS_EXCEEDED', message: 'OTP attempts exceeded' } });
     }
-    const valid = otp.codeHash === otpHash(otp.id, input.code, config.JWT_SECRET);
+    const valid = otpProvider.providerManaged
+      ? await otpProvider.checkOtp!(input.phone, input.code)
+      : otp.codeHash === otpHash(otp.id, input.code, config.JWT_SECRET);
     if (!valid) {
       await prisma.otpRequest.update({ where: { id: otp.id }, data: { attempts: { increment: 1 } } });
       return reply.code(400).send({ error: { code: 'OTP_INVALID', message: 'OTP is invalid or expired' } });

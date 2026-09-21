@@ -24,3 +24,9 @@ export class NotificationService {
     await Promise.allSettled(this.channels.map((channel) => channel.send(message)));
   }
 }
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    notifications: NotificationService;
+  }
+}

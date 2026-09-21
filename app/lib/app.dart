@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/l10n/app_strings.dart';
 import 'core/providers.dart';
+import 'core/push/push_service.dart';
 import 'core/realtime/realtime.dart';
 import 'core/router/app_router.dart';
 import 'core/settings/settings_provider.dart';
@@ -46,6 +47,7 @@ class _KoraAppState extends ConsumerState<KoraApp> {
       if (next is Authenticated) {
         rt.connect();
         _rtSub ??= rt.events.listen(_onEvent);
+        unawaited(ref.read(pushServiceProvider).sync());
       } else if (next is Unauthenticated) {
         _rtSub?.cancel();
         _rtSub = null;
@@ -96,8 +98,8 @@ class _KoraAppState extends ConsumerState<KoraApp> {
       title: 'KORA',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: settings.themeMode,
+      // KORA ships a single light lilac identity — no dark mode.
+      themeMode: ThemeMode.light,
       routerConfig: router,
       scaffoldMessengerKey: _messengerKey,
       builder: (context, child) {

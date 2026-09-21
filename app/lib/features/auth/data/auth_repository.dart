@@ -9,12 +9,16 @@ class OtpRequest {
     required this.requestId,
     required this.ttlSeconds,
     required this.phone,
+    this.channel = 'sms',
     this.devOtp,
   });
 
   final String requestId;
   final int ttlSeconds;
   final String phone;
+
+  /// Delivery channel chosen by the user: `sms` or `whatsapp`.
+  final String channel;
   final String? devOtp;
 }
 
@@ -40,13 +44,16 @@ class AuthRepository {
   final ApiClient _api;
   final TokenStorage _tokens;
 
-  Future<OtpRequest> requestOtp(String phone) async {
+  Future<OtpRequest> requestOtp(String phone,
+      {String channel = 'sms',}) async {
     final res = await _api.post('/auth/request-otp',
-        body: {'phone': phone}, auth: false,) as Map<String, dynamic>;
+        body: {'phone': phone, 'channel': channel},
+        auth: false,) as Map<String, dynamic>;
     return OtpRequest(
       requestId: res['requestId'] as String,
       ttlSeconds: (res['ttlSeconds'] as num).toInt(),
       phone: phone,
+      channel: channel,
       devOtp: res['devOtp'] as String?,
     );
   }
