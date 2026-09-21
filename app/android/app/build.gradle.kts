@@ -60,8 +60,16 @@ android {
             if (hasReleaseKeystore) {
                 signingConfig = signingConfigs.getByName("release")
             }
-            isMinifyEnabled = true
-            isShrinkResources = true
+            // R8 minification stays OFF until every plugin has audited
+            // keep-rules — stripped plugin classes crash release builds
+            // on launch while debug works fine. proguard-rules.pro is
+            // ready for re-enablement.
+            isMinifyEnabled = false
+            isShrinkResources = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
