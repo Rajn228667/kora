@@ -55,22 +55,23 @@ jobs:
         working-directory: app
         run: flutter pub get
 
-      # --- Signing -------------------------------------------------------------
-      # Requires CI secrets (base64-encoded keystore + key.properties fields):
-      #   ANDROID_KEYSTORE_BASE64, ANDROID_KEY_PASSWORD,
-      #   ANDROID_KEY_ALIAS, ANDROID_STORE_PASSWORD
-      # Uncomment when secrets are configured.
-      # - name: Decode keystore
-      #   run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > app/android/kora-release.keystore
-      # - name: Write key.properties
-      #   run: |
-      #     cat > app/android/key.properties <<EOF
-      #     storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
-      #     keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-      #     keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-      #     storeFile=kora-release.keystore
-      #     EOF
-      # --------------------------------------------------------------------------
+      - name: Validate release secrets
+        shell: bash
+        run: |
+          test -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" || { echo "ANDROID_KEYSTORE_BASE64 is required"; exit 1; }
+          test -n "${{ secrets.ANDROID_KEY_PASSWORD }}" || { echo "ANDROID_KEY_PASSWORD is required"; exit 1; }
+          test -n "${{ secrets.ANDROID_KEY_ALIAS }}" || { echo "ANDROID_KEY_ALIAS is required"; exit 1; }
+          test -n "${{ secrets.ANDROID_STORE_PASSWORD }}" || { echo "ANDROID_STORE_PASSWORD is required"; exit 1; }
+      - name: Decode keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > app/android/kora-release.keystore
+      - name: Write key.properties
+        run: |
+          cat > app/android/key.properties <<EOF
+          storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=kora-release.keystore
+          EOF
 
       - name: Build AAB (release)
         working-directory: app
@@ -78,18 +79,22 @@ jobs:
           flutter build appbundle --release \
             --build-name="${{ inputs.version_name }}" \
             --build-number="${{ inputs.version_code }}" \
+            --dart-define APP_MODE=api \
             --dart-define API_URL=${{ steps.envsel.outputs.API_URL }} \
             --dart-define WS_URL=${{ steps.envsel.outputs.WS_URL }} \
-            --dart-define APP_ENV=${{ inputs.environment }}
+            --dart-define APP_ENV=${{ inputs.environment }} \
+            --dart-define MAP_PROVIDER=tiles
       - name: Build APK (release)
         working-directory: app
         run: |
           flutter build apk --release \
             --build-name="${{ inputs.version_name }}" \
             --build-number="${{ inputs.version_code }}" \
+            --dart-define APP_MODE=api \
             --dart-define API_URL=${{ steps.envsel.outputs.API_URL }} \
             --dart-define WS_URL=${{ steps.envsel.outputs.WS_URL }} \
-            --dart-define APP_ENV=${{ inputs.environment }}
+            --dart-define APP_ENV=${{ inputs.environment }} \
+            --dart-define MAP_PROVIDER=tiles
       - uses: actions/upload-artifact@v4
         with:
           name: android-${{ inputs.environment }}-${{ inputs.version_name }}
@@ -132,9 +137,11 @@ jobs:
           flutter build ios --release --no-codesign \
             --build-name="${{ inputs.version_name }}" \
             --build-number="${{ inputs.version_code }}" \
+            --dart-define APP_MODE=api \
             --dart-define API_URL=${{ env.API_URL_PROD }} \
             --dart-define WS_URL=${{ env.WS_URL_PROD }} \
-            --dart-define APP_ENV=production
+            --dart-define APP_ENV=production \
+            --dart-define MAP_PROVIDER=tiles
       - name: Package unsigned IPA (simulator/sideload QC)
         working-directory: app
         run: |

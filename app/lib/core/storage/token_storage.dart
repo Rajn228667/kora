@@ -1,10 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Secure token storage (Keychain / EncryptedSharedPreferences),
-/// with SharedPreferences fallback for platforms without keystore.
+/// Secure token storage (Keychain / EncryptedSharedPreferences).
+/// Web tokens stay in memory only, preventing persistence in localStorage.
 class TokenStorage {
-  TokenStorage() : _secure = const FlutterSecureStorage(
+  TokenStorage()
+      : _secure = const FlutterSecureStorage(
           aOptions: AndroidOptions(encryptedSharedPreferences: true),
         );
 
@@ -14,6 +16,8 @@ class TokenStorage {
   static const _kBiometric = 'kora.biometric_enabled';
 
   SharedPreferences? _prefs;
+  String? _webAccess;
+  String? _webRefresh;
 
   Future<SharedPreferences> get _sp async =>
       _prefs ??= await SharedPreferences.getInstance();
@@ -22,40 +26,28 @@ class TokenStorage {
     required String access,
     required String refresh,
   }) async {
-    try {
-      await _secure.write(key: _kAccess, value: access);
-      await _secure.write(key: _kRefresh, value: refresh);
-    } catch (_) {
-      final p = await _sp;
-      await p.setString(_kAccess, access);
-      await p.setString(_kRefresh, refresh);
+    if (kIsWeb) {
+      _webAccess = access;
+      _webRefresh = refresh;
+      return;
     }
+    await _secure.write(key: _kAccess, value: access);
+    await _secure.write(key: _kRefresh, value: refresh);
   }
 
-  Future<String?> readAccess() async {
-    try {
-      return await _secure.read(key: _kAccess);
-    } catch (_) {
-      return (await _sp).getString(_kAccess);
-    }
-  }
+  Future<String?> readAccess() async =>
+      kIsWeb ? _webAccess : _secure.read(key: _kAccess);
 
-  Future<String?> readRefresh() async {
-    try {
-      return await _secure.read(key: _kRefresh);
-    } catch (_) {
-      return (await _sp).getString(_kRefresh);
-    }
-  }
+  Future<String?> readRefresh() async =>
+      kIsWeb ? _webRefresh : _secure.read(key: _kRefresh);
 
   Future<void> clear() async {
-    try {
+    _webAccess = null;
+    _webRefresh = null;
+    if (!kIsWeb) {
       await _secure.delete(key: _kAccess);
       await _secure.delete(key: _kRefresh);
-    } catch (_) {/* fall through */}
-    final p = await _sp;
-    await p.remove(_kAccess);
-    await p.remove(_kRefresh);
+    }
   }
 
   Future<bool> get biometricEnabled async =>

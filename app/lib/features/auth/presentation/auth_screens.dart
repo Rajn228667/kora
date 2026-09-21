@@ -142,7 +142,7 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
   bool _loading = false;
   String? _error;
 
-  bool get _valid => KzPhoneFormatter.toE164(_controller.text).length == 12;
+  bool get _valid => KzPhoneFormatter.isValid(_controller.text);
 
   Future<void> _submit() async {
     setState(() {
@@ -188,13 +188,27 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
               KoraTextField(
                 controller: _controller,
                 hint: S.t('phone.hint'),
+                prefix: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: KazakhstanFlag(),
+                ),
                 keyboardType: TextInputType.phone,
                 inputFormatters: const [KzPhoneFormatter()],
                 errorText: _error,
                 autofocus: true,
                 semanticLabel: S.t('phone.semantic'),
-                onChanged: (_) => setState(() => _error = null),
-                onSubmitted: (_) => _valid ? _submit() : null,
+                onChanged: (value) => setState(() {
+                  final digits = value.replaceAll(RegExp(r'\D'), '').length;
+                  _error =
+                      digits >= 11 && !_valid ? S.t('phone.invalid') : null;
+                }),
+                onSubmitted: (_) {
+                  if (_valid) {
+                    _submit();
+                  } else {
+                    setState(() => _error = S.t('phone.invalid'));
+                  }
+                },
               ),
               if (AppEnv.isDev) ...[
                 const SizedBox(height: AppSpacing.md),
@@ -209,14 +223,16 @@ class _PhoneScreenState extends ConsumerState<PhoneScreen> {
                 loading: _loading,
                 onPressed: _valid ? _submit : null,
               ),
-              const SizedBox(height: AppSpacing.sm),
-              Center(
-                child: KoraGhostButton(
-                  label: S.t('phone.admin_login'),
-                  icon: AppIcons.admin,
-                  onPressed: () => _staffLoginSheet(context),
+              if (AppEnv.isDev) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Center(
+                  child: KoraGhostButton(
+                    label: S.t('phone.admin_login'),
+                    icon: AppIcons.admin,
+                    onPressed: () => _staffLoginSheet(context),
+                  ),
                 ),
-              ),
+              ],
               const SizedBox(height: AppSpacing.xl),
             ],
           ),

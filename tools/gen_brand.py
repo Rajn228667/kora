@@ -16,11 +16,11 @@ import os
 
 OUT = os.path.join(os.path.dirname(__file__), '..', 'app', 'assets', 'brand')
 
-STEM = (216, 200, 255, 235)    # light lilac
-LOWER = (169, 138, 255, 235)   # medium violet
-UPPER = (142, 99, 240, 235)    # deep violet
-NAVY = (38, 35, 59, 255)       # wordmark navy
-WHITE = (255, 255, 255, 255)
+STEM = (216, 204, 255, 255)    # light lilac
+LOWER = (167, 139, 250, 255)   # medium violet
+UPPER = (139, 92, 246, 255)    # KORA primary violet
+NAVY = (30, 27, 50, 255)       # wordmark navy
+WHITE = (251, 250, 255, 255)
 
 
 def capsule(draw, box, radius, color):

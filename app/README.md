@@ -15,7 +15,7 @@ flutter create . --platforms android,ios --org kz.kora --project-name kora
 flutter pub get
 ```
 
-### Запуск без бэкенда (mock-режим, по умолчанию)
+### Запуск без бэкенда (mock-режим, только явно в development)
 
 ```powershell
 flutter run --dart-define=APP_MODE=mock
@@ -90,7 +90,6 @@ lib/
 <uses-permission android:name="android.permission.INTERNET"/>
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-<uses-permission android:name="android.permission.RECORD_AUDIO"/>
 <uses-permission android:name="android.permission.CAMERA"/>
 <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
@@ -100,8 +99,6 @@ lib/
 ```xml
 <key>NSLocationWhenInUseUsageDescription</key>
 <string>Поделитесь точкой доставки, чтобы курьер смог вас найти</string>
-<key>NSMicrophoneUsageDescription</key>
-<string>Микрофон нужен для голосовых сообщений и звонков</string>
 <key>NSCameraUsageDescription</key>
 <string>Камера нужна для фото в чате и аватара</string>
 <key>NSPhotoLibraryUsageDescription</key>

@@ -6,7 +6,6 @@ import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/presentation/auth_providers.dart';
 import '../../features/auth/presentation/auth_screens.dart';
 import '../../features/auth/presentation/splash_screen.dart';
-import '../../features/calls/presentation/call_screen.dart';
 import '../../features/cart/presentation/cart_screen.dart';
 import '../../features/catalog/presentation/catalog_screens.dart';
 import '../../features/chat/presentation/chat_screen.dart';
@@ -156,14 +155,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/chat/:orderId',
         builder: (_, s) =>
             ChatScreen(orderId: s.pathParameters['orderId']!),
-      ),
-      GoRoute(
-        path: '/call/:orderId',
-        builder: (_, s) => CallScreen(
-          peerName: s.uri.queryParameters['to'] == 'courier'
-              ? 'Курьер'
-              : 'Магазин',
-        ),
       ),
       GoRoute(
         path: '/addresses',

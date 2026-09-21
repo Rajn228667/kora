@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../config/env.dart';
 import '../l10n/app_strings.dart';
-import '../theme/app_animations.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_metrics.dart';
 import '../theme/app_typography.dart';
 import '../theme/kora_colors.dart';
 import '../widgets/misc.dart';
 
-/// Geographic point used across the app (delivery, courier, store).
+/// Geographic point used across delivery, courier, address and store flows.
 class GeoPoint {
   const GeoPoint({required this.lat, required this.lng});
 
@@ -43,10 +46,9 @@ class KoraMarker {
   final String? label;
 }
 
-/// Map abstraction. Today it renders a functional stylized city map
-/// (pan/zoom gestures, markers, tap-to-pick). To switch to a real SDK
-/// (Yandex MapKit for KZ), implement the same widget contract inside
-/// `KoraMap` — no feature code changes needed.
+/// Real interactive city map backed by configurable XYZ tiles.
+/// Courier coordinates arrive through the existing realtime/GPS streams;
+/// [followMarker] moves the camera as those coordinates change.
 class KoraMap extends StatefulWidget {
   const KoraMap({
     super.key,
@@ -61,197 +63,133 @@ class KoraMap extends StatefulWidget {
 
   final GeoPoint center;
   final List<KoraMarker> markers;
-
-  /// Ordered polyline points (store → customer etc).
   final List<GeoPoint> route;
-
-  /// When set, tapping the map reports a picked coordinate.
   final ValueChanged<GeoPoint>? onTapPick;
   final GeoPoint? picked;
-
-  /// Marker kind to keep centered while its position streams in.
   final KoraMarkerKind? followMarker;
   final bool interactive;
-
-  /// Rough px-per-degree scale at zoom 1 for the stub renderer.
-  static const double _scale = 12000;
 
   @override
   State<KoraMap> createState() => _KoraMapState();
 }
 
 class _KoraMapState extends State<KoraMap> {
-  Offset _pan = Offset.zero;
-  double _zoom = 1;
+  final _controller = MapController();
 
-  Offset _project(GeoPoint p, Size size) {
-    final dx = (p.lng - widget.center.lng) * KoraMap._scale * _zoom;
-    final dy = -(p.lat - widget.center.lat) * KoraMap._scale * _zoom;
-    return Offset(size.width / 2 + dx + _pan.dx, size.height / 2 + dy + _pan.dy);
-  }
+  LatLng _latLng(GeoPoint point) => LatLng(point.lat, point.lng);
 
-  GeoPoint _unproject(Offset o, Size size) {
-    final dx = o.dx - size.width / 2 - _pan.dx;
-    final dy = o.dy - size.height / 2 - _pan.dy;
-    return GeoPoint(
-      lat: widget.center.lat - dy / (KoraMap._scale * _zoom),
-      lng: widget.center.lng + dx / (KoraMap._scale * _zoom),
-    );
+  @override
+  void didUpdateWidget(covariant KoraMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.followMarker == null) return;
+    final marker = widget.markers
+        .where((item) => item.kind == widget.followMarker)
+        .firstOrNull;
+    final oldMarker = oldWidget.markers
+        .where((item) => item.kind == widget.followMarker)
+        .firstOrNull;
+    if (marker != null && marker.point != oldMarker?.point) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _controller.move(_latLng(marker.point), _controller.camera.zoom);
+        }
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final size = Size(constraints.maxWidth, constraints.maxHeight);
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          child: GestureDetector(
-            onScaleStart: widget.interactive ? (_) {} : null,
-            onScaleUpdate: widget.interactive
-                ? (d) => setState(() {
-                      _pan += d.focalPointDelta;
-                      _zoom = (_zoom * d.scale).clamp(0.6, 3.0);
-                    })
-                : null,
-            onTapUp: widget.onTapPick == null
-                ? null
-                : (d) =>
-                    widget.onTapPick!(_unproject(d.localPosition, size)),
-            child: Container(
-              color: KoraColors.surfaceAlt,
-              child: CustomPaint(
-                painter: _CityPainter(
-                  pan: _pan,
-                  zoom: _zoom,
-                  route: widget.route
-                      .map((p) => _project(p, size))
-                      .toList(),
+    final mapMarkers = [
+      ...widget.markers,
+      if (widget.picked != null)
+        KoraMarker(
+          point: widget.picked!,
+          kind: KoraMarkerKind.deliveryPoint,
+          label: S.t('map.point_label'),
+        ),
+    ];
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: FlutterMap(
+        mapController: _controller,
+        options: MapOptions(
+          initialCenter: _latLng(widget.center),
+          initialZoom: 14,
+          minZoom: 3,
+          maxZoom: 19,
+          interactionOptions: InteractionOptions(
+            flags:
+                widget.interactive ? InteractiveFlag.all : InteractiveFlag.none,
+          ),
+          onTap: widget.onTapPick == null
+              ? null
+              : (_, point) => widget.onTapPick!(
+                    GeoPoint(lat: point.latitude, lng: point.longitude),
+                  ),
+        ),
+        children: [
+          TileLayer(
+            urlTemplate: AppEnv.mapTileUrl,
+            userAgentPackageName: 'kz.kora.kora',
+            maxZoom: 19,
+            tileProvider: NetworkTileProvider(),
+          ),
+          if (widget.route.length >= 2)
+            PolylineLayer(
+              polylines: [
+                Polyline(
+                  points: widget.route.map(_latLng).toList(),
+                  color: KoraColors.primary,
+                  strokeWidth: 5,
                 ),
-                child: Stack(
-                  children: [
-                    for (final m in widget.markers)
-                      _Marker(
-                        position: _project(m.point, size),
-                        marker: m,
-                      ),
-                    if (widget.picked != null)
-                      _Marker(
-                        position: _project(widget.picked!, size),
-                        marker: KoraMarker(
-                          point: widget.picked!,
-                          kind: KoraMarkerKind.deliveryPoint,
-                          label: S.t('map.point_label'),
-                        ),
-                      ),
-                  ],
+              ],
+            ),
+          MarkerLayer(
+            markers: mapMarkers.map(_marker).toList(),
+          ),
+          Positioned(
+            right: 4,
+            bottom: 2,
+            child: Material(
+              color: KoraColors.surface.withValues(alpha: 0.84),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              child: InkWell(
+                onTap: () => launchUrl(
+                  Uri.parse('https://www.openstreetmap.org/copyright'),
+                  mode: LaunchMode.externalApplication,
+                ),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Text(
+                    '© OpenStreetMap',
+                    style: AppTypography.caption.copyWith(fontSize: 9),
+                  ),
                 ),
               ),
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
-}
 
-class _Marker extends StatelessWidget {
-  const _Marker({required this.position, required this.marker});
-
-  final Offset position;
-  final KoraMarker marker;
-
-  @override
-  Widget build(BuildContext context) {
+  Marker _marker(KoraMarker marker) {
     final (icon, color) = switch (marker.kind) {
       KoraMarkerKind.store => (AppIcons.store, KoraColors.darkPurple),
       KoraMarkerKind.customer => (AppIcons.profile, KoraColors.softPurple),
       KoraMarkerKind.courier => (AppIcons.courier, KoraColors.primary),
-      KoraMarkerKind.deliveryPoint =>
-        (AppIcons.location, KoraColors.deepPurple),
+      KoraMarkerKind.deliveryPoint => (
+          AppIcons.location,
+          KoraColors.deepPurple
+        ),
     };
-    // AnimatedPositioned gives smooth marker glide between GPS updates
-    // (courier tracking) instead of teleporting.
-    return AnimatedPositioned(
-      duration: AppAnimations.normal,
-      curve: AppAnimations.ease,
-      left: position.dx - 20,
-      top: position.dy - 40,
+    return Marker(
+      point: _latLng(marker.point),
+      width: marker.label == null ? 48 : 132,
+      height: 64,
+      alignment: Alignment.topCenter,
       child: KoraMapMarker(icon: icon, color: color, label: marker.label),
     );
   }
-}
-
-/// Stylized city grid + route polyline for the stub map.
-class _CityPainter extends CustomPainter {
-  _CityPainter({required this.pan, required this.zoom, required this.route});
-
-  final Offset pan;
-  final double zoom;
-  final List<Offset> route;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final street = Paint()
-      ..color = KoraColors.softBorderC
-      ..strokeWidth = 1.2;
-    final block = Paint()
-      ..color = KoraColors.selected.withValues(alpha: 0.35);
-
-    // City blocks grid.
-    const cell = 90.0;
-    final offX = pan.dx % (cell * zoom);
-    final offY = pan.dy % (cell * zoom);
-    for (double x = offX - cell * zoom; x < size.width; x += cell * zoom) {
-      for (double y = offY - cell * zoom;
-          y < size.height;
-          y += cell * zoom) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(
-              x + 6,
-              y + 6,
-              cell * zoom - 12,
-              cell * zoom - 12,
-            ),
-            const Radius.circular(10),
-          ),
-          block,
-        );
-      }
-    }
-    // Street lines.
-    for (double x = offX; x < size.width; x += cell * zoom) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), street);
-    }
-    for (double y = offY; y < size.height; y += cell * zoom) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), street);
-    }
-    // Route polyline.
-    if (route.length >= 2) {
-      final p = Paint()
-        ..color = KoraColors.primary
-        ..strokeWidth = 3.5
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round;
-      final path = Path()..moveTo(route.first.dx, route.first.dy);
-      for (final pt in route.skip(1)) {
-        path.lineTo(pt.dx, pt.dy);
-      }
-      canvas.drawPath(path, p);
-    }
-    // Hint label.
-    final tp = TextPainter(
-      text: TextSpan(
-        text: 'KORA Map',
-        style: AppTypography.caption,
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(canvas, Offset(size.width - tp.width - 10, size.height - 20));
-  }
-
-  @override
-  bool shouldRepaint(_CityPainter old) =>
-      old.pan != pan || old.zoom != zoom || old.route != route;
 }

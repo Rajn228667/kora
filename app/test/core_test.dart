@@ -75,6 +75,13 @@ void main() {
       );
       expect(res.text, '+7 700 123 45 67');
     });
+
+    test('validates Kazakhstan mobile E.164 ranges', () {
+      expect(KzPhoneFormatter.isValid('+7 700 123 45 67'), isTrue);
+      expect(KzPhoneFormatter.isValid('+7 600 123 45 67'), isTrue);
+      expect(KzPhoneFormatter.isValid('+7 500 123 45 67'), isFalse);
+      expect(KzPhoneFormatter.isValid('+7 700 123 45'), isFalse);
+    });
   });
 
   group('Models', () {

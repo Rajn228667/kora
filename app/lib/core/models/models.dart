@@ -36,7 +36,14 @@ enum CourierStatus { offline, online, busy, delivering }
 
 enum ChatMessageType { text, image, voice, location, system }
 
-enum StoreKind { restaurant, supermarket, pharmacy, electronics, clothing, other }
+enum StoreKind {
+  restaurant,
+  supermarket,
+  pharmacy,
+  electronics,
+  clothing,
+  other
+}
 
 enum TicketStatus { open, inProgress, resolved, closed }
 
@@ -62,8 +69,7 @@ DateTime _ts(Object? v) =>
 /// Localized via the active [S.lang] — keys `status.*` / `pay.*`.
 String orderStatusLabel(OrderStatus s) => S.t('status.${S.snake(s.name)}');
 
-String paymentStatusLabel(PaymentStatus s) =>
-    S.t('pay.${S.snake(s.name)}');
+String paymentStatusLabel(PaymentStatus s) => S.t('pay.${S.snake(s.name)}');
 
 // ---------------------------------------------------------------------------
 // Users / auth
@@ -281,8 +287,16 @@ class Product {
     required this.priceTiyn,
     this.oldPriceTiyn,
     this.sku = '',
+    this.slug = '',
+    this.article = '',
+    this.gtin,
+    this.internalBarcode = '',
+    this.qrIdentifier = '',
     this.categoryId,
+    this.subcategoryId,
+    this.brandId,
     this.unit,
+    this.active = true,
     this.available = true,
     this.stock = 0,
     this.variants = const [],
@@ -298,8 +312,16 @@ class Product {
   final int priceTiyn;
   final int? oldPriceTiyn;
   final String sku;
+  final String slug;
+  final String article;
+  final String? gtin;
+  final String internalBarcode;
+  final String qrIdentifier;
   final String? categoryId;
+  final String? subcategoryId;
+  final String? brandId;
   final String? unit;
+  final bool active;
   final bool available;
   final int stock;
   final List<ProductVariant> variants;
@@ -319,15 +341,22 @@ class Product {
         priceTiyn: (j['priceTiyn'] as num).toInt(),
         oldPriceTiyn: (j['oldPriceTiyn'] as num?)?.toInt(),
         sku: j['sku'] as String? ?? '',
+        slug: j['slug'] as String? ?? '',
+        article: j['article'] as String? ?? '',
+        gtin: j['gtin'] as String?,
+        internalBarcode: j['internalBarcode'] as String? ?? '',
+        qrIdentifier: j['qrIdentifier'] as String? ?? '',
         categoryId: j['categoryId'] as String?,
+        subcategoryId: j['subcategoryId'] as String?,
+        brandId: j['brandId'] as String?,
         unit: j['unit'] as String?,
+        active: j['active'] as bool? ?? true,
         available: j['available'] as bool? ?? true,
         stock: (j['stock'] as num?)?.toInt() ?? 0,
         variants: ((j['variants'] as List?) ?? const [])
             .map((v) => ProductVariant.fromJson(v as Map<String, dynamic>))
             .toList(),
-        characteristics:
-            ((j['characteristics'] as Map?) ?? const {}).map(
+        characteristics: ((j['characteristics'] as Map?) ?? const {}).map(
           (k, v) => MapEntry('$k', '$v'),
         ),
       );
@@ -444,10 +473,12 @@ class OrderStatusEntry {
   final DateTime at;
   final String? reason;
 
-  factory OrderStatusEntry.fromJson(Map<String, dynamic> j) =>
-      OrderStatusEntry(
+  factory OrderStatusEntry.fromJson(Map<String, dynamic> j) => OrderStatusEntry(
         status: _enumByName(
-            OrderStatus.values, j['newStatus'] ?? j['status'], OrderStatus.pending,),
+          OrderStatus.values,
+          j['newStatus'] ?? j['status'],
+          OrderStatus.pending,
+        ),
         actorRole:
             _enumByName(UserRole.values, j['actorRole'], UserRole.customer),
         at: _ts(j['at'] ?? j['createdAt']),
@@ -470,8 +501,7 @@ class DeliverySnapshot {
   final String? comment;
   final DateTime capturedAt;
 
-  factory DeliverySnapshot.fromJson(Map<String, dynamic> j) =>
-      DeliverySnapshot(
+  factory DeliverySnapshot.fromJson(Map<String, dynamic> j) => DeliverySnapshot(
         address: j['address'] as String? ?? '',
         point: GeoPoint(
           lat: (j['lat'] as num?)?.toDouble() ?? 0,
@@ -576,19 +606,27 @@ class Order {
             .map((i) => OrderItem.fromJson(i as Map<String, dynamic>))
             .toList(),
         status: _enumByName(
-            OrderStatus.values, j['status'], OrderStatus.pending,),
-        paymentStatus: _enumByName(PaymentStatus.values,
-            j['paymentStatus'], PaymentStatus.pending,),
+          OrderStatus.values,
+          j['status'],
+          OrderStatus.pending,
+        ),
+        paymentStatus: _enumByName(
+          PaymentStatus.values,
+          j['paymentStatus'],
+          PaymentStatus.pending,
+        ),
         delivery: DeliverySnapshot.fromJson(
-            (j['delivery'] as Map?)?.cast<String, dynamic>() ?? const {},),
+          (j['delivery'] as Map?)?.cast<String, dynamic>() ?? const {},
+        ),
         subtotalTiyn: (j['subtotalTiyn'] as num?)?.toInt() ?? 0,
         discountTiyn: (j['discountTiyn'] as num?)?.toInt() ?? 0,
         deliveryTiyn: (j['deliveryTiyn'] as num?)?.toInt() ?? 0,
         totalTiyn: (j['totalTiyn'] as num?)?.toInt() ?? 0,
         createdAt: _ts(j['createdAt']),
         statusHistory: ((j['statusHistory'] as List?) ?? const [])
-            .map((h) =>
-                OrderStatusEntry.fromJson(h as Map<String, dynamic>),)
+            .map(
+              (h) => OrderStatusEntry.fromJson(h as Map<String, dynamic>),
+            )
             .toList(),
         promoCode: j['promoCode'] as String?,
         courierId: j['courierId'] as String?,
@@ -596,7 +634,8 @@ class Order {
         courierPhone: j['courierPhone'] as String?,
         courierLocation: j['courierLocation'] != null
             ? GeoPoint.fromJson(
-                (j['courierLocation'] as Map).cast<String, dynamic>(),)
+                (j['courierLocation'] as Map).cast<String, dynamic>(),
+              )
             : null,
       );
 }
@@ -652,7 +691,10 @@ class ChatMessage {
         roomId: j['roomId'] as String? ?? '',
         senderId: j['senderId'] as String? ?? '',
         type: _enumByName(
-            ChatMessageType.values, j['type'], ChatMessageType.text,),
+          ChatMessageType.values,
+          j['type'],
+          ChatMessageType.text,
+        ),
         at: _ts(j['at'] ?? j['createdAt']),
         text: j['text'] as String?,
         mediaUrl: j['mediaUrl'] as String?,

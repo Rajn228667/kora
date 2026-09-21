@@ -105,6 +105,24 @@ enum PromotionKind {
   free_delivery
 }
 
+enum InventoryTxnKind {
+  receipt
+  reservation
+  release
+  sale
+  refund
+  adjustment
+}
+
+enum PaymentTxnKind {
+  create
+  authorize
+  capture
+  fail
+  refund
+  webhook
+}
+
 // ─── Auth & users ──────────────────────────────────────────────────────────
 
 model User {
@@ -124,7 +142,7 @@ model User {
   updatedAt     DateTime @updatedAt
 
   sessions        Session[]
-  managedStores   StoreManager[]
+  managedStores   StoreManager[] @relation("StoreManagers")
   addresses       Address[]
   favorites       Favorite[]
   recentlyViewed  RecentlyViewed[]
@@ -191,10 +209,38 @@ model Category {
   nameKk    String?
   nameEn    String?
   kind      StoreKind
-  sortOrder Int       @default(0)
-  stores    Store[]
+  sortOrder     Int           @default(0)
+  stores        Store[]
+  products      Product[]
+  subcategories Subcategory[]
 
   @@index([kind, sortOrder])
+}
+
+model Subcategory {
+  id        String   @id @default(cuid())
+  categoryId String
+  category  Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name      String
+  nameKk    String?
+  nameEn    String?
+  slug      String   @unique
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  products  Product[]
+
+  @@index([categoryId, active, sortOrder])
+}
+
+model Brand {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String    @unique
+  logoUrl  String?
+  active   Boolean   @default(true)
+  products Product[]
+
+  @@index([active, name])
 }
 
 model Store {
@@ -249,31 +295,76 @@ model StoreManager {
 }
 
 model Product {
-  id              String    @id @default(cuid())
+  id              String       @id @default(cuid())
   storeId         String
-  store           Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store           Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
   categoryId      String?
+  category        Category?    @relation(fields: [categoryId], references: [id])
+  subcategoryId   String?
+  subcategory     Subcategory? @relation(fields: [subcategoryId], references: [id])
+  brandId         String?
+  brand           Brand?       @relation(fields: [brandId], references: [id])
   name            String
   nameKk          String?
-  description     String   @default("")
+  slug            String       @unique
+  description     String       @default("")
   priceTiyn       Int
   oldPriceTiyn    Int?
   unit            String?
-  stock           Int       @default(0)
-  available       Boolean   @default(true)
+  sku             String       @unique
+  article         String       @unique
+  gtin            String?      @unique
+  internalBarcode String       @unique
+  qrIdentifier    String       @unique
+  stock           Int          @default(0)
+  reservedStock   Int          @default(0)
+  available       Boolean      @default(true)
+  active          Boolean      @default(true)
   imageUrl        String?
   blurHash        String?
-  characteristics Json      @default("{}")
+  characteristics Json         @default("{}")
   searchVector    Unsupported("tsvector")?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
-  variants  ProductVariant[]
-  cartItems CartItem[]
-  orderItems OrderItem[]
+  variants             ProductVariant[]
+  images               ProductImage[]
+  inventoryTransactions InventoryTransaction[]
+  cartItems            CartItem[]
+  orderItems           OrderItem[]
 
-  @@index([storeId, available])
-  @@index([categoryId])
+  @@index([storeId, active, available])
+  @@index([categoryId, subcategoryId])
+  @@index([brandId])
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  blurHash  String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([productId, sortOrder])
+}
+
+model InventoryTransaction {
+  id            String           @id @default(cuid())
+  productId     String
+  product       Product          @relation(fields: [productId], references: [id], onDelete: Restrict)
+  kind          InventoryTxnKind
+  quantity      Int
+  stockAfter    Int
+  reservedAfter Int
+  orderId       String?
+  actorId       String?
+  note          String?
+  createdAt     DateTime         @default(now())
+
+  @@index([productId, createdAt])
+  @@index([orderId])
 }
 
 model ProductVariant {
@@ -462,8 +553,25 @@ model Payment {
   webhookEvents Json            @default("[]")
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
+  transactions  PaymentTransaction[]
 
   @@index([orderId])
+  @@index([externalId])
+}
+
+model PaymentTransaction {
+  id             String         @id @default(cuid())
+  paymentId      String
+  payment        Payment        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  kind           PaymentTxnKind
+  idempotencyKey String         @unique
+  externalId     String?
+  amountTiyn     Int
+  status         PaymentStatus
+  providerPayload Json?
+  createdAt      DateTime       @default(now())
+
+  @@index([paymentId, createdAt])
   @@index([externalId])
 }
 
@@ -486,7 +594,7 @@ model CourierOffer {
   orderId     String
   order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
   courierId   String
-  courier     CourierProfile @relation(fields: [courierId], references: [id])
+  courier     CourierProfile @relation(fields: [courierId], references: [userId])
   status      OfferStatus @default(pending)
   feeTiyn     Int
   distanceKm  Float
@@ -560,7 +668,7 @@ model WalletAccount {
 model WalletTransaction {
   id         String         @id @default(cuid())
   accountId  String
-  account    WalletAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  account    WalletAccount  @relation(fields: [accountId], references: [userId], onDelete: Cascade)
   kind       WalletTxnKind
   amountTiyn Int // + earn / − spend
   title      String

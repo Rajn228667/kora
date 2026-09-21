@@ -465,7 +465,17 @@ class MockApiClient implements ApiClient {
     bool match(String s) =>
         s.toLowerCase().contains(query) || s.toLowerCase().contains(stem);
     final stores = _stores.where((s) => match(s.name)).map(_storeJson);
-    final products = _products.where((p) => match(p.name)).map(_productJson);
+    final products = _products
+        .where(
+          (p) =>
+              match(p.name) ||
+              match(p.description) ||
+              match(p.sku) ||
+              match(p.article) ||
+              match(p.gtin ?? '') ||
+              match(p.internalBarcode),
+        )
+        .map(_productJson);
     return _wrap([...stores, ...products]);
   }
 
@@ -1951,8 +1961,16 @@ class MockApiClient implements ApiClient {
         'priceTiyn': p.priceTiyn,
         'oldPriceTiyn': p.oldPriceTiyn,
         'sku': p.sku,
+        'slug': p.slug,
+        'article': p.article,
+        'gtin': p.gtin,
+        'internalBarcode': p.internalBarcode,
+        'qrIdentifier': p.qrIdentifier,
         'categoryId': p.categoryId,
+        'subcategoryId': p.subcategoryId,
+        'brandId': p.brandId,
         'unit': p.unit,
+        'active': p.active,
         'available': p.available && p.stock > 0,
         'stock': p.stock,
         'variants': p.variants

@@ -8,8 +8,8 @@ plugins {
 }
 
 // Release signing via android/key.properties (kept out of VCS).
-// Without it the release build falls back to the debug key so that
-// `flutter build` still works in dev/CI.
+// Without it release artifacts remain unsigned; debug keys are never used
+// for production packages.
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 val hasReleaseKeystore = keystorePropertiesFile.exists()
@@ -57,11 +57,11 @@ android {
 
     buildTypes {
         release {
-            signingConfig = if (hasReleaseKeystore) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.getByName("release")
             }
+            isMinifyEnabled = true
+            isShrinkResources = true
         }
     }
 }

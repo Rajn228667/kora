@@ -63,8 +63,6 @@
 	<string>Камера нужна для фотографий в чате поддержки и карточек товаров.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Доступ к галерее нужен, чтобы прикреплять фото в чате и загружать изображения товаров.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Микрофон используется для звонков курьеру и голосовых сообщений.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Face ID защищает вход в ваш аккаунт KORA.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

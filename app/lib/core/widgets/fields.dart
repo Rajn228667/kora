@@ -13,6 +13,7 @@ class KoraTextField extends StatelessWidget {
     this.hint,
     this.label,
     this.prefixIcon,
+    this.prefix,
     this.suffix,
     this.keyboardType,
     this.obscure = false,
@@ -32,6 +33,7 @@ class KoraTextField extends StatelessWidget {
   final String? hint;
   final String? label;
   final IconData? prefixIcon;
+  final Widget? prefix;
   final Widget? suffix;
   final TextInputType? keyboardType;
   final bool obscure;
@@ -65,9 +67,10 @@ class KoraTextField extends StatelessWidget {
         hintText: hint,
         errorText: errorText,
         counterText: '',
-        prefixIcon: prefixIcon == null
-            ? null
-            : Icon(prefixIcon, color: KoraColors.placeholderC, size: 22),
+        prefixIcon: prefix ??
+            (prefixIcon == null
+                ? null
+                : Icon(prefixIcon, color: KoraColors.placeholderC, size: 22)),
         suffixIcon: suffix,
       ),
     );
@@ -184,4 +187,67 @@ class KzPhoneFormatter extends TextInputFormatter {
 
   static String toE164(String formatted) =>
       '+${formatted.replaceAll(RegExp(r'\D'), '')}';
+
+  /// Kazakhstan national numbering plan: country code +7 followed by a
+  /// mobile prefix beginning with 6 or 7 and nine remaining digits.
+  static bool isValid(String formatted) =>
+      RegExp(r'^\+7[67]\d{9}$').hasMatch(toE164(formatted));
+}
+
+/// Compact Kazakhstan flag drawn locally; no emoji/font dependency and no
+/// remote asset request on the authentication screen.
+class KazakhstanFlag extends StatelessWidget {
+  const KazakhstanFlag({super.key});
+
+  @override
+  Widget build(BuildContext context) => const SizedBox(
+        width: 24,
+        height: 16,
+        child: CustomPaint(painter: _KazakhstanFlagPainter()),
+      );
+}
+
+class _KazakhstanFlagPainter extends CustomPainter {
+  const _KazakhstanFlagPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(2)),
+      Paint()..color = const Color(0xFF00AFCA),
+    );
+    final gold = Paint()..color = const Color(0xFFFFD700);
+    final center = Offset(size.width * 0.53, size.height * 0.43);
+    canvas.drawCircle(center, size.height * 0.16, gold);
+    final ray = Paint()
+      ..color = const Color(0xFFFFD700)
+      ..strokeWidth = 0.8;
+    for (var i = 0; i < 8; i++) {
+      final angle = i * 3.141592653589793 / 4;
+      canvas.drawLine(
+        center + Offset.fromDirection(angle, size.height * 0.2),
+        center + Offset.fromDirection(angle, size.height * 0.27),
+        ray,
+      );
+    }
+    final eagle = Path()
+      ..moveTo(size.width * 0.32, size.height * 0.72)
+      ..quadraticBezierTo(
+        size.width * 0.53,
+        size.height * 0.58,
+        size.width * 0.74,
+        size.height * 0.72,
+      )
+      ..quadraticBezierTo(
+        size.width * 0.53,
+        size.height * 0.67,
+        size.width * 0.32,
+        size.height * 0.72,
+      );
+    canvas.drawPath(eagle, gold);
+  }
+
+  @override
+  bool shouldRepaint(_KazakhstanFlagPainter oldDelegate) => false;
 }

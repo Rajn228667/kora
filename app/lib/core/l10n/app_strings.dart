@@ -243,16 +243,14 @@ abstract final class S {
     'chat.hint': 'Сообщение…',
     'chat.attach': 'Прикрепить',
     'chat.photo': 'Фото',
-    'chat.voice': 'Голосовое сообщение',
     'chat.location': 'Моя геопозиция',
     'chat.geo': 'Геопозиция',
     'chat.photo_unavailable':
-        'Загрузка фото будет доступна после подключения хранилища',
-    'chat.voice_unavailable':
-        'Голосовые сообщения появятся в следующем обновлении',
+        'Не удалось открыть фото. Проверьте разрешение на доступ к галерее',
     'chat.load_error': 'Не удалось открыть чат',
 
     // call
+    'call.unavailable': 'Звонки недоступны на этом устройстве',
     'call.ringing': 'Вызов…',
     'call.mic': 'Микрофон',
     'call.mic_on': 'Вкл. микро',
@@ -785,15 +783,13 @@ abstract final class S {
     'chat.hint': 'Хабарлама…',
     'chat.attach': 'Тіркеу',
     'chat.photo': 'Фото',
-    'chat.voice': 'Дауыстық хабарлама',
     'chat.location': 'Менің геолокациям',
     'chat.geo': 'Геолокация',
     'chat.photo_unavailable':
-        'Фото жүктеу қойма қосылғаннан кейін қолжетімді болады',
-    'chat.voice_unavailable':
-        'Дауыстық хабарламалар келесі жаңартуда пайда болады',
+        'Фотоны ашу мүмкін болмады. Галерея рұқсатын тексеріңіз',
     'chat.load_error': 'Чатты ашу мүмкін болмады',
 
+    'call.unavailable': 'Бұл құрылғыда қоңырау шалу мүмкін емес',
     'call.ringing': 'Қоңырау…',
     'call.mic': 'Микрофон',
     'call.mic_on': 'Микро қосу',
@@ -1312,14 +1308,13 @@ abstract final class S {
     'chat.hint': 'Message…',
     'chat.attach': 'Attach',
     'chat.photo': 'Photo',
-    'chat.voice': 'Voice message',
     'chat.location': 'My location',
     'chat.geo': 'Location',
     'chat.photo_unavailable':
-        'Photo upload will be available once storage is connected',
-    'chat.voice_unavailable': 'Voice messages will arrive in the next update',
+        'Could not open the photo. Check gallery permission',
     'chat.load_error': 'Failed to open chat',
 
+    'call.unavailable': 'Calls are unavailable on this device',
     'call.ringing': 'Calling…',
     'call.mic': 'Microphone',
     'call.mic_on': 'Mic on',

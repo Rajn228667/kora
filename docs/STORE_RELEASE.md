@@ -52,7 +52,6 @@ Declare only what is used; provide in-app usage descriptions
 |------------|-----|---------|--------------------|
 | Location (while-in-use) | Customer | delivery address, nearby stores | "To show stores near you and place your delivery address" |
 | Location (always / background) | **Courier role only** | live tracking during active delivery | "To share your position with the customer while you deliver" — gated behind courier role; Google requires background-location declaration video |
-| Microphone | calls feature | in-app customer↔courier calls | "To make voice calls to the courier/customer" |
 | Camera | chat photos, delivery proof, avatar | photo capture | "To send photos in chat and attach delivery proof" |
 | Photos/Gallery | chat, avatar | attach existing images | "To attach photos from your gallery" |
 | Notifications | all | order status, chat | "To notify you about order status and messages" (Android 13+ `POST_NOTIFICATIONS`) |
