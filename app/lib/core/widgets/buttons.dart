@@ -47,7 +47,7 @@ class KoraButton extends StatelessWidget {
           boxShadow: enabled
               ? const [
                   BoxShadow(
-                    color: Color(0x338B5CF6),
+                    color: KoraColors.primaryGlow,
                     blurRadius: 12,
                     offset: Offset(0, 4),
                   ),

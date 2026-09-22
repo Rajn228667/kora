@@ -130,7 +130,7 @@ class _BalanceCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.xl),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x338B5CF6),
+            color: KoraColors.primaryGlow,
             blurRadius: 24,
             offset: Offset(0, 10),
           ),

@@ -881,7 +881,7 @@ class _TemplateCard extends StatelessWidget {
 
   Widget _premium(int? discount) => Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF241F3D),
+          color: KoraColors.deepPurple,
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         child: Column(

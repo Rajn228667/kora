@@ -103,18 +103,14 @@ class _KoraAppState extends ConsumerState<KoraApp> {
       routerConfig: router,
       scaffoldMessengerKey: _messengerKey,
       builder: (context, child) {
-        final isDark =
-            Theme.of(context).brightness == Brightness.dark;
-        KoraTheme.dark = isDark;
+        // Single light lilac identity — dark tokens stay unused.
+        KoraTheme.dark = false;
         SystemChrome.setSystemUIOverlayStyle(
-          SystemUiOverlayStyle(
+          const SystemUiOverlayStyle(
             statusBarColor: Colors.transparent,
-            statusBarIconBrightness:
-                isDark ? Brightness.light : Brightness.dark,
-            systemNavigationBarColor:
-                isDark ? KoraColors.darkBackground : KoraColors.white,
-            systemNavigationBarIconBrightness:
-                isDark ? Brightness.light : Brightness.dark,
+            statusBarIconBrightness: Brightness.dark,
+            systemNavigationBarColor: KoraColors.white,
+            systemNavigationBarIconBrightness: Brightness.dark,
           ),
         );
         final mq = MediaQuery.of(context);
@@ -127,9 +123,7 @@ class _KoraAppState extends ConsumerState<KoraApp> {
             if (_offline)
               Container(
                 width: double.infinity,
-                color: KoraTheme.dark
-                    ? KoraColors.darkElevated
-                    : KoraColors.textPrimary,
+                color: KoraColors.deepPurple,
                 padding: EdgeInsets.only(
                   top: MediaQuery.of(context).padding.top + 6,
                   bottom: 6,

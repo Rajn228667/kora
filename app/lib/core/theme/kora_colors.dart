@@ -17,6 +17,7 @@ abstract final class KoraColors {
 
   // Brand purples
   static const Color primary = Color(0xFF8B5CF6);
+  static const Color primaryGlow = Color(0x338B5CF6);
   static const Color softPurple = Color(0xFFA78BFA);
   static const Color darkPurple = Color(0xFF6D28D9);
   static const Color deepPurple = Color(0xFF5B21B6);
