@@ -1,13 +1,20 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { authenticate } from '../auth/guard.js';
+import { hashPassword, verifyPassword } from '../auth/passwords.js';
 import type { Config } from '../config.js';
 import { prisma } from '../plugins/prisma.js';
 
 const profileSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
+  lastName: z.string().trim().min(1).max(80).optional(),
+  email: z.string().email().max(254).nullable().optional(),
   avatarUrl: z.string().url().max(2048).nullable().optional(),
-}).refine((value) => value.name !== undefined || value.avatarUrl !== undefined);
+  acceptTerms: z.literal(true).optional(),
+  acceptPrivacy: z.literal(true).optional(),
+}).refine(
+  (v) => Object.values(v).some((x) => x !== undefined),
+);
 
 const addressSchema = z.object({
   label: z.string().trim().min(1).max(60),
@@ -40,6 +47,7 @@ const publicUser = (user: {
   phone: string;
   email: string | null;
   name: string;
+  lastName?: string;
   avatarUrl: string | null;
   role: string;
 }) => ({
@@ -47,6 +55,7 @@ const publicUser = (user: {
   phone: user.phone,
   email: user.email,
   name: user.name,
+  lastName: user.lastName ?? '',
   avatarUrl: user.avatarUrl,
   role: user.role,
 });
@@ -66,16 +75,115 @@ export async function registerUserRoutes(app: FastifyInstance, config: Config): 
     const auth = await authenticate(request, reply, config);
     if (!auth) return;
     const input = profileSchema.parse(request.body);
+    if (input.email) {
+      const taken = await prisma.user.findFirst({
+        where: { email: input.email, id: { not: auth.sub } },
+      });
+      if (taken) {
+        return reply.code(409).send({
+          error: { code: 'EMAIL_TAKEN', message: 'Email already registered' },
+        });
+      }
+    }
+    const { acceptTerms, acceptPrivacy, ...fields } = input;
+    const now = new Date();
     const user = await prisma.user.update({
       where: { id: auth.sub },
-      data: input,
+      data: {
+        ...fields,
+        ...(acceptTerms ? { acceptedTermsAt: now } : {}),
+        ...(acceptPrivacy ? { acceptedPrivacyAt: now } : {}),
+      },
     });
     return publicUser(user);
+  });
+
+  // Set or change account password. When a password already exists the
+  // current one must be supplied — prevents session-token-only takeover.
+  app.post('/v1/users/me/password', async (request, reply) => {
+    const auth = await authenticate(request, reply, config);
+    if (!auth) return;
+    const input = z
+      .object({
+        currentPassword: z.string().min(1).max(200).optional(),
+        newPassword: z.string().min(8).max(200),
+      })
+      .parse(request.body);
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: auth.sub },
+    });
+    if (user.passwordHash) {
+      const ok = input.currentPassword
+        ? await verifyPassword(input.currentPassword, user.passwordHash)
+        : false;
+      if (!ok) {
+        return reply.code(403).send({
+          error: { code: 'PASSWORD_MISMATCH', message: 'Current password is wrong' },
+        });
+      }
+    }
+    const passwordHash = await hashPassword(input.newPassword);
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: auth.sub }, data: { passwordHash } }),
+      prisma.auditLog.create({
+        data: {
+          actorId: auth.sub,
+          actorRole: auth.role,
+          action: user.passwordHash ? 'password_changed' : 'password_set',
+          resource: auth.sub,
+          details: {},
+        },
+      }),
+    ]);
+    return { ok: true };
   });
 
   app.delete('/v1/users/me', async (request, reply) => {
     const auth = await authenticate(request, reply, config);
     if (!auth) return;
+    const input = z
+      .object({ password: z.string().min(1).max(200).optional() })
+      .parse(request.body ?? {});
+
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: auth.sub },
+    });
+    // Re-authentication: accounts with a password must confirm it.
+    if (user.passwordHash) {
+      const ok = input.password
+        ? await verifyPassword(input.password, user.passwordHash)
+        : false;
+      if (!ok) {
+        return reply.code(403).send({
+          error: { code: 'PASSWORD_REQUIRED', message: 'Password confirmation required' },
+        });
+      }
+    }
+    // Active orders block deletion — they carry legal/delivery obligations.
+    const activeOrders = await prisma.order.count({
+      where: {
+        userId: auth.sub,
+        status: {
+          in: [
+            'pending',
+            'accepted',
+            'preparing',
+            'ready_for_pickup',
+            'courier_assigned',
+            'picked_up',
+            'delivering',
+          ],
+        },
+      },
+    });
+    if (activeOrders > 0) {
+      return reply.code(409).send({
+        error: {
+          code: 'ACCOUNT_HAS_ACTIVE_ORDERS',
+          message: 'Finish or cancel active orders first',
+        },
+      });
+    }
     await prisma.$transaction([
       prisma.session.updateMany({
         where: { userId: auth.sub, revokedAt: null },
@@ -267,6 +375,33 @@ export async function registerUserRoutes(app: FastifyInstance, config: Config): 
         current: s.id === auth.sessionId,
       })),
     };
+  });
+
+  // Revoke a single session (other device) — ownership enforced by userId.
+  app.post('/v1/users/me/sessions/:id/revoke', async (request, reply) => {
+    const auth = await authenticate(request, reply, config);
+    if (!auth) return;
+    const { id } = request.params as { id: string };
+    await prisma.session.updateMany({
+      where: { id, userId: auth.sub },
+      data: { revokedAt: new Date() },
+    });
+    return { ok: true };
+  });
+
+  // Logout all devices except the current session.
+  app.post('/v1/users/me/sessions/revoke-all', async (request, reply) => {
+    const auth = await authenticate(request, reply, config);
+    if (!auth) return;
+    await prisma.session.updateMany({
+      where: {
+        userId: auth.sub,
+        revokedAt: null,
+        id: { not: auth.sessionId },
+      },
+      data: { revokedAt: new Date() },
+    });
+    return { ok: true };
   });
 
   // ── Wallet & referral ──

@@ -105,12 +105,32 @@ class AuthRepository {
     }
   }
 
-  Future<User> updateProfile({String? name, String? avatarUrl}) async {
+  Future<User> updateProfile({
+    String? name,
+    String? lastName,
+    String? email,
+    String? avatarUrl,
+    bool? acceptTerms,
+    bool? acceptPrivacy,
+  }) async {
     final res = await _api.patch('/users/me', body: {
       if (name != null) 'name': name,
+      if (lastName != null) 'lastName': lastName,
+      if (email != null) 'email': email,
       if (avatarUrl != null) 'avatarUrl': avatarUrl,
+      if (acceptTerms == true) 'acceptTerms': true,
+      if (acceptPrivacy == true) 'acceptPrivacy': true,
     },) as Map<String, dynamic>;
     return User.fromJson(res);
+  }
+
+  /// Set (first time) or change the account password.
+  Future<void> setPassword({String? currentPassword,
+      required String newPassword,}) async {
+    await _api.post('/users/me/password', body: {
+      if (currentPassword != null) 'currentPassword': currentPassword,
+      'newPassword': newPassword,
+    },);
   }
 
   Future<void> logout() async {
@@ -121,9 +141,13 @@ class AuthRepository {
     }
   }
 
-  Future<void> deleteAccount() async {
+  /// Account deletion — when the account has a password the server
+  /// requires it for re-authentication.
+  Future<void> deleteAccount({String? password}) async {
     try {
-      await _api.delete('/users/me');
+      await _api.delete('/users/me', body: {
+        if (password != null) 'password': password,
+      },);
     } finally {
       await _tokens.clear();
     }

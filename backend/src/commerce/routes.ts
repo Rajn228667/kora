@@ -549,7 +549,28 @@ export async function registerCommerceRoutes(
         promoCode = promo.code;
       }
     }
-    const deliveryTiyn = store.deliveryFeeTiyn;
+    // Distance-based delivery fee: base + per-km, free above a threshold,
+    // and a hard service radius around the store.
+    const distanceKm = haversineKm(
+      store.lat,
+      store.lng,
+      delivery.lat,
+      delivery.lng,
+    );
+    if (distanceKm > store.deliveryRadiusKm) {
+      return reply.code(422).send({
+        error: {
+          code: 'DELIVERY_OUT_OF_ZONE',
+          message: 'Address is outside the delivery zone',
+        },
+      });
+    }
+    const freeAbove = store.freeDeliveryAboveTiyn;
+    const deliveryTiyn =
+      freeAbove != null && subtotal >= freeAbove
+        ? 0
+        : store.deliveryFeeTiyn +
+          Math.ceil(distanceKm) * store.deliveryPerKmTiyn;
     const totalTiyn = Math.max(0, subtotal - discountTiyn) + deliveryTiyn;
 
     // Wallet payment requires sufficient balance.
@@ -565,7 +586,9 @@ export async function registerCommerceRoutes(
     }
 
     const number = await nextOrderNumber();
-    const order = await prisma.$transaction(async (tx) => {
+    let order;
+    try {
+      order = await prisma.$transaction(async (tx) => {
       // Reserve-free checkout: decrement stock atomically.
       for (const item of cart.items) {
         const updated = await tx.product.updateMany({
@@ -661,13 +684,25 @@ export async function registerCommerceRoutes(
           },
         });
       }
-      await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
-      await tx.cart.update({
-        where: { id: cart.id },
-        data: { storeId: null },
+        await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+        await tx.cart.update({
+          where: { id: cart.id },
+          data: { storeId: null },
+        });
+        return created;
       });
-      return created;
-    });
+    } catch (error) {
+      const message = (error as Error).message;
+      if (message.startsWith('OUT_OF_STOCK:')) {
+        return reply.code(409).send({
+          error: {
+            code: 'OUT_OF_STOCK',
+            message: `${message.slice(13)}: not enough stock`,
+          },
+        });
+      }
+      throw error;
+    }
 
     app.realtime.sendToUser(auth.sub, 'order.created', {
       orderId: order.id,
@@ -935,4 +970,15 @@ async function checkoutIssues(userId: string) {
     }
   }
   return issues;
+}
+
+/// Great-circle distance in kilometres (WGS84 mean radius).
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const rad = (v: number) => (v * Math.PI) / 180;
+  const dLat = rad(lat2 - lat1);
+  const dLng = rad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }

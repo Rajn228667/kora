@@ -424,25 +424,69 @@ class ProfileSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
-  final _controller = TextEditingController();
+  final _name = TextEditingController();
+  final _lastName = TextEditingController();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  final _confirm = TextEditingController();
+  bool _terms = false;
+  bool _privacy = false;
   bool _loading = false;
+  String? _error;
 
   @override
   void dispose() {
-    _controller.dispose();
+    _name.dispose();
+    _lastName.dispose();
+    _email.dispose();
+    _password.dispose();
+    _confirm.dispose();
     super.dispose();
   }
 
+  bool get _valid =>
+      _name.text.trim().isNotEmpty &&
+      _lastName.text.trim().isNotEmpty &&
+      _terms &&
+      _privacy &&
+      (_password.text.isEmpty ||
+          (_password.text.length >= 8 &&
+              _password.text == _confirm.text));
+
   Future<void> _save() async {
-    final name = _controller.text.trim();
-    if (name.isEmpty) return;
-    setState(() => _loading = true);
+    if (!_valid) {
+      setState(() => _error = (!_terms || !_privacy)
+          ? S.t('profile_setup.consent_error')
+          : _password.text.isNotEmpty &&
+                  (_password.text.length < 8 ||
+                      _password.text != _confirm.text)
+              ? S.t('profile_setup.password_error')
+              : null,);
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
-      final user =
-          await ref.read(authRepositoryProvider).updateProfile(name: name);
+      final repo = ref.read(authRepositoryProvider);
+      final email = _email.text.trim();
+      final user = await repo.updateProfile(
+        name: _name.text.trim(),
+        lastName: _lastName.text.trim(),
+        email: email.isEmpty ? null : email,
+        acceptTerms: true,
+        acceptPrivacy: true,
+      );
+      // Optional password — enables password login fallback later.
+      if (_password.text.isNotEmpty) {
+        await repo.setPassword(newPassword: _password.text);
+      }
       if (!mounted) return;
       ref.read(authControllerProvider.notifier).setUser(user);
       context.go('/home');
+    } on ApiException catch (e) {
+      setState(() => _error = e.message);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -452,35 +496,116 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
+        child: ListView(
           padding: AppSpacing.screenPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: AppSpacing.xxl),
-              Text(S.t('profile_setup.title'), style: AppTypography.headline),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                S.t('profile_setup.subtitle'),
-                style: AppTypography.bodySecondary,
+          children: [
+            const SizedBox(height: AppSpacing.xl),
+            Text(S.t('profile_setup.title'), style: AppTypography.headline),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              S.t('profile_setup.subtitle'),
+              style: AppTypography.bodySecondary,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            KoraTextField(
+              controller: _name,
+              hint: S.t('profile_setup.hint'),
+              autofocus: true,
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            KoraTextField(
+              controller: _lastName,
+              hint: S.t('profile_setup.lastname'),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            KoraTextField(
+              controller: _email,
+              hint: S.t('profile_setup.email'),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            KoraTextField(
+              controller: _password,
+              hint: S.t('profile_setup.password'),
+              obscure: true,
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            KoraTextField(
+              controller: _confirm,
+              hint: S.t('profile_setup.password_confirm'),
+              obscure: true,
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _ConsentTile(
+              value: _terms,
+              label: S.t('profile_setup.terms'),
+              onChanged: (v) => setState(() => _terms = v),
+            ),
+            _ConsentTile(
+              value: _privacy,
+              label: S.t('profile_setup.privacy'),
+              onChanged: (v) => setState(() => _privacy = v),
+            ),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: Text(
+                  _error!,
+                  style: AppTypography.caption
+                      .copyWith(color: KoraColors.error),
+                ),
               ),
-              const SizedBox(height: AppSpacing.xxl),
-              KoraTextField(
-                controller: _controller,
-                hint: S.t('profile_setup.hint'),
-                autofocus: true,
-                onChanged: (_) => setState(() {}),
-                onSubmitted: (_) => _save(),
+            const SizedBox(height: AppSpacing.xl),
+            KoraButton(
+              label: S.t('profile_setup.continue'),
+              loading: _loading,
+              onPressed: _save,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ConsentTile extends StatelessWidget {
+  const _ConsentTile({
+    required this.value,
+    required this.label,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final String label;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => onChanged(!value),
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: Checkbox(
+                value: value,
+                onChanged: (v) => onChanged(v ?? false),
+                activeColor: KoraColors.primary,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
-              const Spacer(),
-              KoraButton(
-                label: S.t('profile_setup.continue'),
-                loading: _loading,
-                onPressed: _controller.text.trim().isNotEmpty ? _save : null,
-              ),
-              const SizedBox(height: AppSpacing.xl),
-            ],
-          ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(child: Text(label, style: AppTypography.caption)),
+          ],
         ),
       ),
     );

@@ -623,7 +623,9 @@ class _SessionsScreenState extends ConsumerState<SessionsScreen> {
   }
 
   Future<void> _logoutOthers() async {
-    await ref.read(apiClientProvider).post('/auth/logout-all');
+    await ref
+        .read(apiClientProvider)
+        .post('/users/me/sessions/revoke-all');
     if (!mounted) return;
     setState(() => _future = _load());
     KoraSnackbar.show(context, S.t('sessions.logged_out'));

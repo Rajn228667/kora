@@ -17,6 +17,7 @@ import type { Config } from './config.js';
 import { NotificationService } from './notifications/notification-service.js';
 import { createPushChannel } from './notifications/push-provider.js';
 import { registerNotificationRoutes } from './notifications/routes.js';
+import { registerPaymentRoutes } from './payments/routes.js';
 import { prisma } from './plugins/prisma.js';
 import { registerRealtimeGateway } from './realtime/gateway.js';
 import { registerUserRoutes } from './users/routes.js';
@@ -79,6 +80,7 @@ export async function buildApp(config: Config): Promise<FastifyInstance> {
   await registerUserRoutes(app, config);
   await registerCatalogRoutes(app, config);
   await registerCommerceRoutes(app, config);
+  await registerPaymentRoutes(app, config);
   await registerNotificationRoutes(app, config);
   await registerSupportRoutes(app, config);
   await registerChatRoutes(app, config);

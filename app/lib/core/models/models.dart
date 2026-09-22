@@ -80,6 +80,8 @@ class User {
     required this.id,
     required this.phone,
     required this.name,
+    this.lastName = '',
+    this.email,
     this.avatarUrl,
     this.role = UserRole.customer,
     this.blocked = false,
@@ -88,14 +90,21 @@ class User {
   final String id;
   final String phone;
   final String name;
+  final String lastName;
+  final String? email;
   final String? avatarUrl;
   final UserRole role;
   final bool blocked;
+
+  String get fullName =>
+      lastName.isEmpty ? name : '$name $lastName';
 
   factory User.fromJson(Map<String, dynamic> j) => User(
         id: j['id'] as String,
         phone: j['phone'] as String? ?? '',
         name: j['name'] as String? ?? '',
+        lastName: j['lastName'] as String? ?? '',
+        email: j['email'] as String?,
         avatarUrl: j['avatarUrl'] as String?,
         role: _enumByName(UserRole.values, j['role'], UserRole.customer),
         blocked: j['blocked'] as bool? ?? false,
@@ -105,14 +114,24 @@ class User {
         'id': id,
         'phone': phone,
         'name': name,
+        'lastName': lastName,
+        'email': email,
         'avatarUrl': avatarUrl,
         'role': role.name,
       };
 
-  User copyWith({String? name, String? avatarUrl, UserRole? role}) => User(
+  User copyWith({
+    String? name,
+    String? lastName,
+    String? email,
+    String? avatarUrl,
+    UserRole? role,
+  }) => User(
         id: id,
         phone: phone,
         name: name ?? this.name,
+        lastName: lastName ?? this.lastName,
+        email: email ?? this.email,
         avatarUrl: avatarUrl ?? this.avatarUrl,
         role: role ?? this.role,
         blocked: blocked,

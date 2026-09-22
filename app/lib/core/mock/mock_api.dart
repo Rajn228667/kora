@@ -284,6 +284,20 @@ class MockApiClient implements ApiClient {
           'isNewUser': false,
           'user': _user!.toJson(),
         };
+      case 'register':
+        _user = User(
+          id: _id('u'),
+          phone: b['phone'] as String? ?? '+77000000000',
+          name: b['name'] as String? ?? '',
+          lastName: b['lastName'] as String? ?? '',
+          email: b['email'] as String?,
+        );
+        return {
+          'accessToken': 'mock-access-${_user!.id}',
+          'refreshToken': 'mock-refresh-${_user!.id}',
+          'isNewUser': true,
+          'user': _user!.toJson(),
+        };
       case 'logout':
         _user = null;
         return {'ok': true};
@@ -302,6 +316,8 @@ class MockApiClient implements ApiClient {
       if (method == 'PATCH') {
         _user = _user!.copyWith(
           name: b['name'] as String?,
+          lastName: b['lastName'] as String?,
+          email: b['email'] as String?,
           avatarUrl: b['avatarUrl'] as String?,
         );
         return _user!.toJson();
@@ -406,7 +422,14 @@ class MockApiClient implements ApiClient {
         'bonusTiyn': 50000,
       };
     }
+    if (_s(seg, 1) == 'me' && _s(seg, 2) == 'password') {
+      return {'ok': true};
+    }
     if (_s(seg, 1) == 'me' && _s(seg, 2) == 'sessions') {
+      if (method == 'POST') {
+        // revoke / revoke-all — other sessions go away.
+        return {'ok': true};
+      }
       return _wrap([
         {
           'id': 's-current',
@@ -744,6 +767,15 @@ class MockApiClient implements ApiClient {
             orElse: () => throw _notFound('Платёж не найден'),
           );
     if (order == null) throw _notFound('Платёж не найден');
+    if (method == 'POST' && _s(seg, 2) == 'confirm') {
+      final outcome = b['outcome'] as String? ?? 'paid';
+      final status = outcome == 'paid'
+          ? PaymentStatus.paid
+          : PaymentStatus.failed;
+      final i = _orders.indexWhere((o) => o.id == order.id);
+      _orders[i] = order.copyWith(paymentStatus: status);
+      return {'id': pid, 'status': status.name};
+    }
     return {
       'id': pid,
       'orderId': order.id,

@@ -107,6 +107,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             promoCode: widget.promoCode ?? promo?.code,
             paymentMethod: _method,
           );
+      // Wallet/cash settle without an acquiring round-trip; card/Kaspi
+      // payments confirm through the payment endpoint (mock provider in
+      // demo, signed webhook in production).
+      if (_method != 'wallet' && _method != 'cash') {
+        try {
+          await ref
+              .read(checkoutRepositoryProvider)
+              .confirmPayment(result.paymentId);
+        } catch (_) {/* status is readable on the order screen */}
+      }
       ref.read(appliedPromoProvider.notifier).state = null;
       ref.invalidate(cartProvider);
       ref.invalidate(ordersProvider);

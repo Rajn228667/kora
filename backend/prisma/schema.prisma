@@ -130,8 +130,11 @@ model User {
   phone         String   @unique // E.164, +7XXXXXXXXXX
   email         String?  @unique
   name          String   @default("")
+  lastName      String   @default("")
   avatarUrl     String?
   role          UserRole @default(customer)
+  acceptedTermsAt    DateTime?
+  acceptedPrivacyAt  DateTime?
   passwordHash  String?  // staff only — bcrypt/argon2, never for OTP users
   referralCode  String   @unique
   referredById  String?
@@ -271,7 +274,10 @@ model Store {
   rating          Float     @default(0)
   ratingCount     Int       @default(0)
   etaMinutes      Int       @default(30)
-  deliveryFeeTiyn Int       @default(0)
+  deliveryFeeTiyn Int       @default(0) // base fee
+  deliveryPerKmTiyn Int     @default(0)
+  freeDeliveryAboveTiyn Int?
+  deliveryRadiusKm  Float   @default(15)
   minOrderTiyn    Int       @default(0)
   logoUrl         String?
   bannerUrl       String?

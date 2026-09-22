@@ -5,7 +5,7 @@ import type { Config } from '../config.js';
 import { prisma } from '../plugins/prisma.js';
 import { authenticate } from './guard.js';
 import { createOtpProvider } from './sms-provider.js';
-import { verifyPassword } from './passwords.js';
+import { hashPassword, verifyPassword } from './passwords.js';
 import { hashToken, newRefreshToken, signAccessToken } from './tokens.js';
 
 const phoneSchema = z.string().regex(/^\+7[67]\d{9}$/, 'Invalid Kazakhstan mobile number');
@@ -24,6 +24,23 @@ const loginSchema = z.object({
   password: z.string().min(1).max(200),
 });
 
+// Customer self-registration — phone + password + required consents.
+const registerSchema = z
+  .object({
+    name: z.string().trim().min(1).max(60),
+    lastName: z.string().trim().min(1).max(60),
+    phone: phoneSchema,
+    email: z.string().email().max(254).optional(),
+    password: z.string().min(8).max(200),
+    confirmPassword: z.string().min(8).max(200),
+    acceptTerms: z.literal(true),
+    acceptPrivacy: z.literal(true),
+  })
+  .refine((v) => v.password === v.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
+
 const otpHash = (requestId: string, code: string, secret: string): string =>
   createHash('sha256').update(`${requestId}:${code}:${secret}`).digest('hex');
 
@@ -32,6 +49,7 @@ const publicUser = (user: {
   phone: string;
   email: string | null;
   name: string;
+  lastName?: string;
   avatarUrl: string | null;
   role: string;
 }) => ({
@@ -39,6 +57,7 @@ const publicUser = (user: {
   phone: user.phone,
   email: user.email,
   name: user.name,
+  lastName: user.lastName ?? '',
   avatarUrl: user.avatarUrl,
   role: user.role,
 });
@@ -197,6 +216,84 @@ export async function registerAuthRoutes(app: FastifyInstance, config: Config): 
       refreshToken,
       isNewUser: false,
     };
+  });
+
+  // Customer registration — creates user + session, records consents.
+  // Phone stays the primary identity; OTP verification can still run
+  // afterwards. Optional password enables login fallback + staff roles
+  // never get created here (role is hardcoded to customer).
+  app.post('/v1/auth/register', {
+    config: { rateLimit: { max: config.RATE_LIMIT_AUTH_MAX, timeWindow: '1 minute' } },
+  }, async (request, reply) => {
+    const input = registerSchema.parse(request.body);
+
+    const conflict = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { phone: input.phone },
+          ...(input.email ? [{ email: input.email }] : []),
+        ],
+      },
+    });
+    if (conflict?.phone === input.phone) {
+      return reply.code(409).send({
+        error: { code: 'PHONE_TAKEN', message: 'Phone already registered' },
+      });
+    }
+    if (conflict) {
+      return reply.code(409).send({
+        error: { code: 'EMAIL_TAKEN', message: 'Email already registered' },
+      });
+    }
+
+    const passwordHash = await hashPassword(input.password);
+    const now = new Date();
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          phone: input.phone,
+          email: input.email ?? null,
+          name: input.name,
+          lastName: input.lastName,
+          passwordHash,
+          referralCode: randomUUID().replaceAll('-', '').slice(0, 10).toUpperCase(),
+          acceptedTermsAt: now,
+          acceptedPrivacyAt: now,
+        },
+      });
+      const refreshToken = newRefreshToken();
+      const session = await tx.session.create({
+        data: {
+          userId: user.id,
+          refreshTokenHash: hashToken(refreshToken),
+          ip: request.ip,
+          device: String(request.headers['user-agent'] ?? '').slice(0, 250),
+          expiresAt: new Date(Date.now() + config.JWT_REFRESH_TTL * 1000),
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId: user.id,
+          actorRole: 'customer',
+          action: 'user_registered',
+          resource: user.id,
+          details: { channel: 'password' },
+        },
+      });
+      return { user, session, refreshToken };
+    });
+
+    const accessToken = await signAccessToken(config, {
+      sub: result.user.id,
+      role: result.user.role,
+      sessionId: result.session.id,
+    });
+    return reply.code(201).send({
+      user: publicUser(result.user),
+      accessToken,
+      refreshToken: result.refreshToken,
+      isNewUser: true,
+    });
   });
 
   app.post('/v1/auth/logout', async (request, reply) => {

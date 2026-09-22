@@ -30,6 +30,10 @@ const schema = z.object({
   ADMIN_PASSWORD: z.string().min(6).optional(),
   RATE_LIMIT_MAX: z.coerce.number().int().min(10).default(300),
   RATE_LIMIT_AUTH_MAX: z.coerce.number().int().min(1).default(20),
+  PAYMENT_PROVIDER: z.enum(['mock', 'kaspi']).default('mock'),
+  MOCK_PAYMENTS_SECRET: z.string().min(8).optional(),
+  KASPI_MERCHANT_ID: z.string().optional(),
+  KASPI_SECRET_KEY: z.string().optional(),
 });
 
 export type Config = z.infer<typeof schema>;
@@ -64,6 +68,15 @@ export function loadConfig(): Config {
   }
   if (config.APP_ENV === 'production' && (!config.CORS_ORIGINS || config.CORS_ORIGINS === '*')) {
     throw new Error('Production CORS_ORIGINS must be an explicit allowlist');
+  }
+  if (config.APP_ENV === 'production' && config.PAYMENT_PROVIDER === 'mock') {
+    throw new Error('PAYMENT_PROVIDER=mock is forbidden in production');
+  }
+  if (config.PAYMENT_PROVIDER === 'kaspi' && (!config.KASPI_MERCHANT_ID || !config.KASPI_SECRET_KEY)) {
+    throw new Error('PAYMENT_PROVIDER=kaspi requires KASPI_MERCHANT_ID and KASPI_SECRET_KEY');
+  }
+  if (config.APP_ENV !== 'development' && config.PAYMENT_PROVIDER === 'mock' && !config.MOCK_PAYMENTS_SECRET) {
+    throw new Error('MOCK_PAYMENTS_SECRET is required outside development');
   }
   return config;
 }

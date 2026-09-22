@@ -56,6 +56,21 @@ class CheckoutRepository {
     );
   }
 
+  /// Confirms a demo/mock payment server-side. With a real provider
+  /// (Kaspi) the state arrives only through the signed webhook — the
+  /// client then polls [paymentStatus].
+  Future<String> confirmPayment(String paymentId) async {
+    final res = await _api.post('/payments/$paymentId/confirm')
+        as Map<String, dynamic>;
+    return res['status'] as String? ?? 'pending';
+  }
+
+  Future<String> paymentStatus(String paymentId) async {
+    final res = await _api.get('/payments/$paymentId')
+        as Map<String, dynamic>;
+    return res['status'] as String? ?? 'pending';
+  }
+
   Future<List<Address>> addresses() async {
     final res = await _api.get('/users/me/addresses')
         as Map<String, dynamic>;
