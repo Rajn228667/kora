@@ -131,6 +131,8 @@ model User {
   email         String?  @unique
   name          String   @default("")
   lastName      String   @default("")
+  nickname      String?
+  profileBg     String   @default("lavender")
   avatarUrl     String?
   role          UserRole @default(customer)
   acceptedTermsAt    DateTime?

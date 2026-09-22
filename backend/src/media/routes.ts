@@ -26,12 +26,10 @@ export async function registerMediaRoutes(
       .send(Buffer.from(asset.data));
   });
 
-  // Staff upload — accepts base64 image, stores bytes, returns public URL.
+  // Upload — any authenticated user may upload avatars; richer kinds
+  // (product/store) stay restricted to staff.
   app.post('/v1/media', async (request, reply) => {
-    const auth = await authenticate(request, reply, config, [
-      'manager',
-      'admin',
-    ]);
+    const auth = await authenticate(request, reply, config);
     if (!auth) return;
     const { dataBase64, kind, contentType } = z
       .object({
@@ -40,6 +38,15 @@ export async function registerMediaRoutes(
         contentType: z.string().default('image/png'),
       })
       .parse(request.body);
+    const staff = auth.role === 'manager' || auth.role === 'admin';
+    if (!staff && kind !== 'avatar') {
+      return reply.code(403).send({
+        error: {
+          code: 'MEDIA_FORBIDDEN',
+          message: 'Customers can upload avatars only',
+        },
+      });
+    }
     if (!CONTENT_TYPES.has(contentType)) {
       return reply.code(400).send({
         error: {

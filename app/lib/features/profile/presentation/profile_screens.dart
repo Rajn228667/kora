@@ -15,8 +15,9 @@ import '../../../core/widgets/feedback.dart';
 import '../../../core/widgets/fields.dart';
 import '../../../core/widgets/misc.dart';
 import '../../../core/providers.dart';
-import '../../auth/data/auth_repository.dart';
+import '../../../core/network/api_exception.dart';
 import '../../auth/presentation/auth_providers.dart';
+import 'profile_edit_screen.dart';
 import '../../catalog/data/catalog_repository.dart';
 import '../../checkout/data/checkout_repository.dart';
 import '../../checkout/presentation/checkout_screen.dart'
@@ -43,38 +44,58 @@ class ProfileScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
-          KoraCard(
-            child: Row(
-              children: [
-                KoraAvatar(
-                  imageUrl: user.avatarUrl,
-                  initials: user.name.isEmpty
-                      ? '?'
-                      : user.name.substring(0, 1).toUpperCase(),
-                  radius: 28,
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        user.name.isEmpty
-                            ? S.t('profile.no_name')
-                            : user.name,
-                        style: AppTypography.title,
-                      ),
-                      Text(user.phone, style: AppTypography.caption),
-                    ],
+          GestureDetector(
+            onTap: () => context.push('/profile/edit'),
+            child: KoraCard(
+              color: profileBgColor(user.profileBg),
+              child: Row(
+                children: [
+                  KoraAvatar(
+                    imageUrl: user.avatarUrl,
+                    initials: user.name.isEmpty
+                        ? '?'
+                        : user.name.substring(0, 1).toUpperCase(),
+                    radius: 28,
                   ),
-                ),
-                IconButton(
-                  tooltip: S.t('profile.edit_tooltip'),
-                  icon: const Icon(AppIcons.edit,
-                      color: KoraColors.primary, size: 20,),
-                  onPressed: () => _editName(context, ref, user),
-                ),
-              ],
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user.fullName.isEmpty
+                              ? S.t('profile.no_name')
+                              : user.fullName,
+                          style: AppTypography.title.copyWith(
+                            color: profileBgTextColor(user.profileBg),
+                          ),
+                        ),
+                        if (user.nickname != null &&
+                            user.nickname!.isNotEmpty)
+                          Text(
+                            '@${user.nickname}',
+                            style: AppTypography.caption.copyWith(
+                              color: profileBgTextColor(user.profileBg),
+                            ),
+                          ),
+                        Text(
+                          user.phone,
+                          style: AppTypography.caption.copyWith(
+                            color: profileBgTextColor(user.profileBg)
+                                .withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: S.t('profile.edit_tooltip'),
+                    icon: const Icon(AppIcons.edit,
+                        color: KoraColors.primary, size: 20,),
+                    onPressed: () => context.push('/profile/edit'),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -186,37 +207,6 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _editName(BuildContext context, WidgetRef ref, User user) async {
-    final controller = TextEditingController(text: user.name);
-    final saved = await KoraBottomSheet.show<String>(
-      context,
-      child: Padding(
-        padding: AppSpacing.cardPadding,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(S.t('profile.edit_name'), style: AppTypography.title),
-            const SizedBox(height: AppSpacing.md),
-            KoraTextField(
-                controller: controller, hint: S.t('profile_setup.hint'),),
-            const SizedBox(height: AppSpacing.md),
-            KoraButton(
-              label: S.t('common.save'),
-              onPressed: () =>
-                  Navigator.pop(context, controller.text.trim()),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (saved != null && saved.isNotEmpty) {
-      final repo = ref.read(authRepositoryProvider);
-      final updated = await repo.updateProfile(name: saved);
-      ref.read(authControllerProvider.notifier).setUser(updated);
-    }
-  }
-
   Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
     final confirmed = await KoraDialog.confirm(
       context,
@@ -226,8 +216,52 @@ class ProfileScreen extends ConsumerWidget {
       confirmLabel: S.t('profile.delete_confirm'),
     );
     if (!confirmed) return;
-    await ref.read(authControllerProvider.notifier).deleteAccount();
+    try {
+      await ref.read(authControllerProvider.notifier).deleteAccount();
+    } on ApiException catch (e) {
+      // Accounts with a password must re-authenticate before deletion.
+      if (e.code == 'PASSWORD_REQUIRED' && context.mounted) {
+        final password = await _passwordSheet(context);
+        if (password == null || password.isEmpty) return;
+        await ref
+            .read(authControllerProvider.notifier)
+            .deleteAccount(password: password);
+      } else {
+        rethrow;
+      }
+    }
     if (context.mounted) context.go('/welcome');
+  }
+
+  Future<String?> _passwordSheet(BuildContext context) {
+    final controller = TextEditingController();
+    return KoraBottomSheet.show<String>(
+      context,
+      child: Padding(
+        padding: AppSpacing.cardPadding,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(S.t('profile.delete_title'), style: AppTypography.title),
+            const SizedBox(height: AppSpacing.sm),
+            Text(S.t('profile.delete_password_hint'),
+                style: AppTypography.caption,),
+            const SizedBox(height: AppSpacing.md),
+            KoraTextField(
+              controller: controller,
+              hint: S.t('profile_setup.password'),
+              obscure: true,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            KoraButton(
+              label: S.t('profile.delete_confirm'),
+              onPressed: () => Navigator.pop(context, controller.text),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

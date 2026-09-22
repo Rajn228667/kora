@@ -81,6 +81,8 @@ class User {
     required this.phone,
     required this.name,
     this.lastName = '',
+    this.nickname,
+    this.profileBg = 'lavender',
     this.email,
     this.avatarUrl,
     this.role = UserRole.customer,
@@ -91,6 +93,8 @@ class User {
   final String phone;
   final String name;
   final String lastName;
+  final String? nickname;
+  final String profileBg;
   final String? email;
   final String? avatarUrl;
   final UserRole role;
@@ -104,6 +108,8 @@ class User {
         phone: j['phone'] as String? ?? '',
         name: j['name'] as String? ?? '',
         lastName: j['lastName'] as String? ?? '',
+        nickname: j['nickname'] as String?,
+        profileBg: j['profileBg'] as String? ?? 'lavender',
         email: j['email'] as String?,
         avatarUrl: j['avatarUrl'] as String?,
         role: _enumByName(UserRole.values, j['role'], UserRole.customer),
@@ -115,6 +121,8 @@ class User {
         'phone': phone,
         'name': name,
         'lastName': lastName,
+        'nickname': nickname,
+        'profileBg': profileBg,
         'email': email,
         'avatarUrl': avatarUrl,
         'role': role.name,
@@ -123,6 +131,8 @@ class User {
   User copyWith({
     String? name,
     String? lastName,
+    String? nickname,
+    String? profileBg,
     String? email,
     String? avatarUrl,
     UserRole? role,
@@ -131,6 +141,8 @@ class User {
         phone: phone,
         name: name ?? this.name,
         lastName: lastName ?? this.lastName,
+        nickname: nickname ?? this.nickname,
+        profileBg: profileBg ?? this.profileBg,
         email: email ?? this.email,
         avatarUrl: avatarUrl ?? this.avatarUrl,
         role: role ?? this.role,

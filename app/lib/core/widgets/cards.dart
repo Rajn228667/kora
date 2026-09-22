@@ -17,6 +17,7 @@ class KoraCard extends StatelessWidget {
     this.onTap,
     this.elevated = false,
     this.semanticLabel,
+    this.color,
   });
 
   final Widget child;
@@ -24,13 +25,14 @@ class KoraCard extends StatelessWidget {
   final VoidCallback? onTap;
   final bool elevated;
   final String? semanticLabel;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final card = Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: KoraColors.surface,
+        color: color ?? KoraColors.surface,
         borderRadius: AppRadius.card,
         border: Border.all(color: KoraColors.softBorderC),
         boxShadow: elevated ? AppShadows.card : AppShadows.none,

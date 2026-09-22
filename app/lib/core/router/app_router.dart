@@ -17,6 +17,7 @@ import '../../features/manager/presentation/manager_tools.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/orders/presentation/orders_screens.dart';
 import '../../features/profile/presentation/legal_screens.dart';
+import '../../features/profile/presentation/profile_edit_screen.dart';
 import '../../features/profile/presentation/profile_screens.dart';
 import '../../features/profile/presentation/settings_screens.dart';
 import '../../features/profile/presentation/wallet_screen.dart';
@@ -183,6 +184,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings/appearance',
         builder: (_, __) => const AppearanceScreen(),
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        builder: (_, __) => const ProfileEditScreen(),
       ),
       GoRoute(
         path: '/promo',

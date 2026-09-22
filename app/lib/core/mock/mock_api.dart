@@ -208,6 +208,11 @@ class MockApiClient implements ApiClient {
         'uploadUrl': 'mock://upload/${_id('upl')}',
       };
     }
+    if (seg[0] == 'media' && method == 'POST' && seg.length == 1) {
+      // Base64 avatar/image upload — returns a served media URL.
+      final id = _id('med');
+      return {'id': id, 'url': '/v1/media/$id', 'sizeBytes': 1024};
+    }
     if (seg[0] == 'couriers') return _courier(method, seg, b);
     if (seg[0] == 'manager') return _manager(method, seg, b, q);
     if (seg[0] == 'admin') return _admin(method, seg, b, q);
@@ -317,6 +322,8 @@ class MockApiClient implements ApiClient {
         _user = _user!.copyWith(
           name: b['name'] as String?,
           lastName: b['lastName'] as String?,
+          nickname: b['nickname'] as String?,
+          profileBg: b['profileBg'] as String?,
           email: b['email'] as String?,
           avatarUrl: b['avatarUrl'] as String?,
         );

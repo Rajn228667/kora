@@ -5,11 +5,26 @@ import { hashPassword, verifyPassword } from '../auth/passwords.js';
 import type { Config } from '../config.js';
 import { prisma } from '../plugins/prisma.js';
 
+const PROFILE_BGS = ['lavender', 'white', 'purple', 'mist'] as const;
+
 const profileSchema = z.object({
   name: z.string().trim().min(1).max(80).optional(),
   lastName: z.string().trim().min(1).max(80).optional(),
+  nickname: z
+    .string()
+    .trim()
+    .regex(/^[a-zA-Z0-9_]{2,30}$/, 'Nickname: letters, digits, underscore')
+    .nullable()
+    .optional(),
+  profileBg: z.enum(PROFILE_BGS).optional(),
   email: z.string().email().max(254).nullable().optional(),
-  avatarUrl: z.string().url().max(2048).nullable().optional(),
+  avatarUrl: z
+    .union([
+      z.string().url().max(2048),
+      z.string().regex(/^\/v1\/media\//),
+    ])
+    .nullable()
+    .optional(),
   acceptTerms: z.literal(true).optional(),
   acceptPrivacy: z.literal(true).optional(),
 }).refine(
@@ -48,6 +63,8 @@ const publicUser = (user: {
   email: string | null;
   name: string;
   lastName?: string;
+  nickname?: string | null;
+  profileBg?: string;
   avatarUrl: string | null;
   role: string;
 }) => ({
@@ -56,6 +73,8 @@ const publicUser = (user: {
   email: user.email,
   name: user.name,
   lastName: user.lastName ?? '',
+  nickname: user.nickname ?? null,
+  profileBg: user.profileBg ?? 'lavender',
   avatarUrl: user.avatarUrl,
   role: user.role,
 });

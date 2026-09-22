@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../config/env.dart';
 import '../theme/app_icons.dart';
 import '../theme/app_metrics.dart';
 import '../theme/kora_colors.dart';
@@ -59,8 +60,10 @@ class KoraImage extends StatelessWidget {
         errorBuilder: (_, __, ___) => _placeholder(),
       );
     } else {
+      // Relative media paths (`/v1/media/…`) resolve against the API host.
+      final resolved = url!.startsWith('/') ? '${AppEnv.apiUrl}$url' : url!;
       child = CachedNetworkImage(
-        imageUrl: url!,
+        imageUrl: resolved,
         width: width,
         height: height,
         fit: fit,

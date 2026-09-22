@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/models.dart';
 import '../../../core/network/api_client.dart';
@@ -108,6 +110,8 @@ class AuthRepository {
   Future<User> updateProfile({
     String? name,
     String? lastName,
+    String? nickname,
+    String? profileBg,
     String? email,
     String? avatarUrl,
     bool? acceptTerms,
@@ -116,12 +120,24 @@ class AuthRepository {
     final res = await _api.patch('/users/me', body: {
       if (name != null) 'name': name,
       if (lastName != null) 'lastName': lastName,
-      if (email != null) 'email': email,
+      if (nickname != null) 'nickname': nickname.isEmpty ? null : nickname,
+      if (profileBg != null) 'profileBg': profileBg,
+      if (email != null) 'email': email.isEmpty ? null : email,
       if (avatarUrl != null) 'avatarUrl': avatarUrl,
       if (acceptTerms == true) 'acceptTerms': true,
       if (acceptPrivacy == true) 'acceptPrivacy': true,
     },) as Map<String, dynamic>;
     return User.fromJson(res);
+  }
+
+  /// Avatar upload — ≤2MB enforced client- and server-side.
+  Future<String> uploadAvatar(Uint8List bytes, String contentType) async {
+    final res = await _api.post('/media', body: {
+      'dataBase64': base64Encode(bytes),
+      'kind': 'avatar',
+      'contentType': contentType,
+    },) as Map<String, dynamic>;
+    return res['url'] as String;
   }
 
   /// Set (first time) or change the account password.
@@ -142,15 +158,13 @@ class AuthRepository {
   }
 
   /// Account deletion — when the account has a password the server
-  /// requires it for re-authentication.
+  /// requires it for re-authentication. Tokens clear only on success,
+  /// so a failed confirmation doesn't kill the local session.
   Future<void> deleteAccount({String? password}) async {
-    try {
-      await _api.delete('/users/me', body: {
-        if (password != null) 'password': password,
-      },);
-    } finally {
-      await _tokens.clear();
-    }
+    await _api.delete('/users/me', body: {
+      if (password != null) 'password': password,
+    },);
+    await _tokens.clear();
   }
 }
 
