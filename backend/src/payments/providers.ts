@@ -29,7 +29,7 @@ export class MockPaymentAdapter implements PaymentProviderAdapter {
     });
   }
 
-  verifyCallback(
+  async verifyCallback(
     rawBody: Buffer,
     headers: Readonly<Record<string, string | string[] | undefined>>,
   ): Promise<PaymentVerificationResult> {
