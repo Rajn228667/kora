@@ -34,6 +34,6 @@ describe('mock payment provider', () => {
     const body = JSON.stringify({ externalId: 'x', status: 'paid', amountTiyn: 1 });
     await expect(
       adapter.verifyCallback(Buffer.from(body), { 'x-mock-signature': 'bad' }),
-    ).rejects.toMatchObject({ statusCode: 401 });
+    ).rejects.toThrow('Invalid signature');
   });
 });
